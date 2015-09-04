@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
+#    Author: Sylvain VanHoof, Samuel Lefever
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#    Copyright 2015 Niboo (<http://www.niboo.be>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -18,8 +20,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp import models, api, fields
-
+from openerp import api, models
 from .github import GithubHosting
 
 import logging

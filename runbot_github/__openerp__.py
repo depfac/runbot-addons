@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
+#    Author: Sylvain VanHoof, Samuel Lefever
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#    Copyright 2015 Niboo (<http://www.niboo.be>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -25,6 +27,15 @@
     'summary': 'Add the Github hosting to Runbot',
     'version': '1.0',
     'description': """
+Runbot Multiple Hosting
+=======================
+
+Add Gihub hosting ability to runbot
+
+Contributors
+------------
+* Sylvain Van Hoof
+* Samuel Lefever (sam@niboo.be)
 """,
     'author': "Eezee-It,Odoo Community Association (OCA)",
     'depends': ['runbot', 'runbot_multiple_hosting'],

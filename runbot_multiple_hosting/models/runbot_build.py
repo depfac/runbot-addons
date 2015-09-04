@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
+#    Author: Sylvain VanHoof, Samuel Lefever
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#    Copyright 2015 Niboo (<http://www.niboo.be>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,15 +23,12 @@
 import os
 import glob
 import shutil
-
-from openerp import models, api, fields
-
+from openerp import models, api
 from openerp.addons.runbot import runbot
 
 import logging
 
 _logger = logging.getLogger(__name__)
-_logger.setLevel(logging.DEBUG)
 
 
 class RunbotBuild(models.Model):
@@ -40,7 +39,8 @@ class RunbotBuild(models.Model):
         result = super(RunbotBuild, self).checkout()
         for build in self:
             for extra_repo in build.repo_id.dependency_nested_ids:
-                extra_repo.repo_dst_id.git_export(extra_repo.reference, build.path())
+                extra_repo.repo_dst_id.git_export(
+                    extra_repo.reference, build.path())
 
             modules_to_move = [
                 os.path.dirname(module)
@@ -52,7 +52,8 @@ class RunbotBuild(models.Model):
                 if os.path.exists(build.server('addons', basename)):
                     build._log(
                         'Building environment',
-                        'You have duplicate modules in your branches "%s"' % basename
+                        'You have duplicate modules in your branches "%s"' %
+                        basename
                     )
                     shutil.rmtree(build.server('addons', basename))
                 shutil.move(module, build.server('addons'))

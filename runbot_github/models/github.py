@@ -1,8 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
+#    Author: Sylvain VanHoof, Samuel Lefever
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#    Copyright 2015 Niboo (<http://www.niboo.be>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -20,6 +22,7 @@
 ##############################################################################
 from openerp.addons.runbot_multiple_hosting.models import hosting
 
+
 class GithubHosting(hosting.Hosting):
     API_URL = 'https://api.github.com'
     URL = 'https://github.com'
@@ -29,7 +32,9 @@ class GithubHosting(hosting.Hosting):
 
         token = (credentials, 'x-oauth-basic')
         self.session.auth = token
-        self.session.headers.update({'Accept': 'application/vnd.github.she-hulk-preview+json'})
+        self.session.headers.update(
+            {'Accept': 'application/vnd.github.she-hulk-preview+json'}
+        )
 
     @classmethod
     def get_branch_url(cls, owner, repository, branch):
@@ -40,6 +45,7 @@ class GithubHosting(hosting.Hosting):
         return cls.get_url('/%s/%s/pull/%s', owner, repository, pull_number)
 
     def get_pull_request(self, owner, repository, pull_number):
-        url = self.get_api_url('/repos/%s/%s/pulls/%s' % (owner, repository, pull_number))
+        url = self.get_api_url('/repos/%s/%s/pulls/%s' % (owner, repository,
+                                                          pull_number))
         response = self.session.get(url)
         return response.json()
