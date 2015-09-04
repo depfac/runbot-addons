@@ -19,31 +19,21 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+import requests
 
-{
-    'name': 'Runbot Gitlab Integration',
-    'category': 'Website',
-    'summary': 'Runbot with Gitlab integration',
-    'version': '1.1',
-    'description': """
-Runbot Gitlab Integration
-=========================
 
-Add option in repo form view for gitlab repos builds. When checked:
+class Hosting(object):
+    def __init__(self):
+        self.session = requests.Session()
 
-* Runbot will pool the gitlab interface
+    @classmethod
+    def get_api_url(cls, endpoint):
+        return '%s%s' % (cls.API_URL, endpoint)
 
-Contributors
-------------
-* Sandy Carter (sandy.carter@savoirfairelinux.com)
-* Paul Catinean (paulcatinean@gmail.com)
-""",
-    'author': "Savoir-faire Linux,Odoo Community Association (OCA),Eezee-It",
-    'depends': ['runbot', 'runbot_multiple_hosting'],
-    'external_dependencies': {
-        'python': ['gitlab3', ]
-    },
-    'data': [
-    ],
-    'installable': True,
-}
+    @classmethod
+    def get_url(cls, endpoint, *args):
+        tmp_endpoint = endpoint % tuple(args)
+        return '%s%s' % (cls.URL, tmp_endpoint)
+
+    def update_status_on_commit(self, owner, repository, commit_hash, status):
+        raise NotImplementedError("Should have implemented this")

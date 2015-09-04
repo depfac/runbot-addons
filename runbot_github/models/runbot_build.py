@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Odoo, Open Source Management Solution
-#    This module copyright (C) 2010 - 2014 Savoir-faire Linux
-#    (<http://www.savoirfairelinux.com>).
+#    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -19,31 +18,32 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
+from openerp import models, api, fields
 
-{
-    'name': 'Runbot Gitlab Integration',
-    'category': 'Website',
-    'summary': 'Runbot with Gitlab integration',
-    'version': '1.1',
-    'description': """
-Runbot Gitlab Integration
-=========================
+from openerp.addons.runbot.runbot import runbot_build
 
-Add option in repo form view for gitlab repos builds. When checked:
+import logging
 
-* Runbot will pool the gitlab interface
+_logger = logging.getLogger(__name__)
+_logger.setLevel(logging.DEBUG)
 
-Contributors
-------------
-* Sandy Carter (sandy.carter@savoirfairelinux.com)
-* Paul Catinean (paulcatinean@gmail.com)
-""",
-    'author': "Savoir-faire Linux,Odoo Community Association (OCA),Eezee-It",
-    'depends': ['runbot', 'runbot_multiple_hosting'],
-    'external_dependencies': {
-        'python': ['gitlab3', ]
-    },
-    'data': [
-    ],
-    'installable': True,
-}
+def github(func):
+    """Decorator for functions which should be overwritten only if
+    this repo is bitbucket-.
+    """
+    def github(self, *args, **kwargs):
+        if self.repo_id.hosting == 'github':
+            return func(self, *args, **kwargs)
+        else:
+            regular_func = getattr(super(RunbotBuild, self), func.func_name)
+            return regular_func(*args, **kwargs)
+    return github
+
+
+class RunbotBuild(models.Model):
+    _inherit = "runbot.build"
+
+    @api.multi
+    @github
+    def github_status(self):
+        return super(RunbotBuild, self).github_status()

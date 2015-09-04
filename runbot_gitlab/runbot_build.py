@@ -25,10 +25,10 @@ from openerp.osv import orm, fields
 from .runbot_repo import escape_branch_name
 
 
-class runbot_build(orm.Model):
+class RunbotBuild(orm.Model):
     _inherit = "runbot.build"
 
-    def _get_dest(self, cr, uid, ids, field_name=None, arg=None, context=None):
+    def _get_dest(self, cr, uid, ids, field_name, arg, context=None):
         r = {}
         other_ids = []
         for build in self.browse(cr, uid, ids, context=context):
@@ -41,12 +41,11 @@ class runbot_build(orm.Model):
             else:
                 other_ids.append(build.id)
         if other_ids:
-            r.update(super(runbot_build, self)._get_dest(
+            r.update(super(RunbotBuild, self)._get_dest(
                 cr, uid, other_ids, field_name, arg, context=context
             ))
         return r
 
     _columns = {
-        'dest': fields.function(
-            _get_dest, type='char', string='Dest', readonly=1, store=True)
+        'dest': fields.function(_get_dest, type='char', string='Dest', readonly=1, store=True),
     }

@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Odoo, Open Source Management Solution
-#    This module copyright (C) 2010 Savoir-faire Linux
-#    (<http://www.savoirfairelinux.com>).
+#    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -19,56 +18,46 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp import models, fields, api
+from openerp import models, api, fields
 
-def gitlab_api(func):
+from .bitbucket import BitBucketHosting
+
+import logging
+
+_logger = logging.getLogger(__name__)
+_logger.setLevel(logging.DEBUG)
+
+
+def bitbucket(func):
     """Decorator for functions which should be overwritten only if
-    uses_gitlab is enabled in repo.
+    this repo is bitbucket-.
     """
-    def gitlab_func(self, *args, **kwargs):
-        if self.repo_id.hosting == 'gitlab':
+    def bitbucket(self, *args, **kwargs):
+        if self.repo_id.hosting == 'bitbucket':
             return func(self, *args, **kwargs)
         else:
             regular_func = getattr(super(RunbotBranch, self), func.func_name)
             return regular_func(*args, **kwargs)
-    return gitlab_func
+    return bitbucket
 
 
 class RunbotBranch(models.Model):
     _inherit = "runbot.branch"
-    project_id = fields.Integer('VCS Project', select=1)
-    merge_request_id = fields.Integer('Merge Request', select=1)
 
     @api.multi
-    @gitlab_api
-    def is_pull_request(self):
-        self.ensure_one()
-
-        if self.merge_request_id:
-            return True
-        return False
-
-    @api.multi
-    @gitlab_api
-    def get_pull_request_url(self, owner, repository, branch):
-        self.ensure_one()
-
-        return "https://%s/merge_requests/%s" % (self.repo_id.base, self.merge_request_id)
-
-    @api.multi
-    @gitlab_api
-    def get_branch_url(self, owner, repository, pull_number):
-        self.ensure_one()
-
-        return "https://%s/tree/%s" % (self.repo_id.base, self.branch_name)
-
-    @api.multi
-    @gitlab_api
+    @bitbucket
     def _get_pull_info(self):
         self.ensure_one()
         repo = self.repo_id
-        if repo.token and repo.name.startswith('refs/pull/'):
-            pull_number = repo.name[len('refs/pull/'):]
-            return repo.github('/repos/:owner/:repo/pulls/%s' % pull_number, ignore_errors=True) or {}
-
+        if repo.username and repo.password and self.name.startswith('refs/pull/'):
+            pull_number = self.name[len('refs/pull/'):]
+            return repo.get_pull_request(pull_number) or {}
         return {}
+
+    @api.multi
+    def get_pull_request_url(self, owner, repository, branch):
+        return BitBucketHosting.get_pull_request_url(owner, repository, branch)
+
+    @api.multi
+    def get_branch_url(self, owner, repository, pull_number):
+        return BitBucketHosting.get_branch_url(owner, repository, pull_number)

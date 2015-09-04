@@ -2,8 +2,7 @@
 ##############################################################################
 #
 #    Odoo, Open Source Management Solution
-#    This module copyright (C) 2010 - 2014 Savoir-faire Linux
-#    (<http://www.savoirfairelinux.com>).
+#    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
@@ -21,29 +20,16 @@
 ##############################################################################
 
 {
-    'name': 'Runbot Gitlab Integration',
+    'name': 'Runbot Multiple Hosting',
     'category': 'Website',
-    'summary': 'Runbot with Gitlab integration',
-    'version': '1.1',
+    'summary': 'Offer the base to use several hosting in Runbot',
+    'version': '1.0',
     'description': """
-Runbot Gitlab Integration
-=========================
-
-Add option in repo form view for gitlab repos builds. When checked:
-
-* Runbot will pool the gitlab interface
-
-Contributors
-------------
-* Sandy Carter (sandy.carter@savoirfairelinux.com)
-* Paul Catinean (paulcatinean@gmail.com)
 """,
-    'author': "Savoir-faire Linux,Odoo Community Association (OCA),Eezee-It",
-    'depends': ['runbot', 'runbot_multiple_hosting'],
-    'external_dependencies': {
-        'python': ['gitlab3', ]
-    },
+    'author': "Eezee-It,Odoo Community Association (OCA)",
+    'depends': ['runbot'],
     'data': [
+        "views/runbot_repo.xml"
     ],
     'installable': True,
 }

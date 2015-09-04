@@ -76,9 +76,8 @@ def gitlab_api(func):
     """Decorator for functions which should be overwritten only if
     uses_gitlab is enabled in repo.
     """
-
     def gitlab_func(self, *args, **kwargs):
-        if self.uses_gitlab:
+        if self.hosting == 'gitlab':
             return func(self, *args, **kwargs)
         else:
             regular_func = getattr(super(RunbotRepo, self), func.func_name)
@@ -147,39 +146,31 @@ def set_gitlab_ci_conf(token, gitlab_url, runbot_domain, repo_id):
 
 class RunbotRepo(models.Model):
     _inherit = "runbot.repo"
-
-    uses_gitlab = fields.Boolean(string='Use Gitlab')
-
-    mr_only = fields.Boolean(
-        string="MR Only",
-        default=True,
-        help="Build only merge requests and skip regular branches")
-
-    sticky_protected = fields.Boolean(
-        string="Sticky for Protected Branches",
-        default=True,
-        help="Set all protected branches on the repository as sticky")
+    hosting = fields.Selection(selection_add=[('gitlab', 'Gitlab')])
 
     @api.model
     def create(self, vals):
         repo_id = super(RunbotRepo, self).create(vals)
-        set_gitlab_ci_conf(
-            vals.get('token'),
-            vals.get('name'),
-            self.domain(),
-            repo_id.id,
-        )
+        if vals.get('hosting') == 'gitlab':
+            set_gitlab_ci_conf(
+                vals.get('token'),
+                vals.get('name'),
+                self.domain(),
+                repo_id.id,
+            )
         return repo_id
 
     @api.multi
     def write(self, vals):
         super(RunbotRepo, self).write(vals)
-        set_gitlab_ci_conf(
-            vals.get('token', self.token),
-            vals.get('name', self.name),
-            self.domain(),
-            self.id,
-        )
+        for repo in self:
+            if repo.hosting == 'gitlab':
+                set_gitlab_ci_conf(
+                    vals.get('token', self.token),
+                    vals.get('name', self.name),
+                    self.domain(),
+                    self.id,
+                )
 
     @api.one
     @gitlab_api
@@ -200,9 +191,6 @@ class RunbotRepo(models.Model):
     @api.one
     @gitlab_api
     def update(self):
-
-        branch_obj = self.env['runbot.branch']
-
         project = get_gitlab_project(self.base, self.token)
 
         merge_requests = project.find_merge_request(
@@ -236,7 +224,7 @@ class RunbotRepo(models.Model):
             subject = commit['message']
             title = mr.title
             # Create or get branch
-            branch_ids = branch_obj.search([
+            branch_ids = self.env['runbot.branch'].search([
                 ('repo_id', '=', self.id),
                 ('project_id', '=', project.id),
                 ('merge_request_id', '=', mr.iid),
@@ -246,7 +234,7 @@ class RunbotRepo(models.Model):
             else:
                 logger.debug('repo %s found new Merge Proposal %s',
                              self.name, title)
-                branch_id = branch_obj.create({
+                branch_id = self.env['runbot.branch'].create({
                     'repo_id': self.id,
                     'name': title,
                     'project_id': project.id,
@@ -281,7 +269,7 @@ class RunbotRepo(models.Model):
             state='closed'
         ))
 
-        closed_mrs = branch_obj.search([
+        closed_mrs = self.env['runbot.branch'].search([
             ('merge_request_id', 'in', closed_mrs),
         ])
 
@@ -294,28 +282,25 @@ class RunbotRepo(models.Model):
         self._cr.commit()
         self._cr.autocommit(True)
 
-        if self.sticky_protected:
-            # Put all protected branches as sticky
-            protected_branches = set(b.name for b in project.find_branch(
-                find_all=True, protected=True)
-            )
-            protected_branches.add(project.default_branch)
+        # Put all protected branches as sticky
+        protected_branches = set(
+            b.name for b in project.find_branch(find_all=True, protected=True)
+        )
+        protected_branches.add(project.default_branch)
 
-            sticky_protected_branches = branch_obj.search([
+        for branch in self.env['runbot.branch'].search([
                 ('branch_name', 'in', list(protected_branches)),
                 ('sticky', '=', False),
-            ])
+        ]):
+            branch.write({'sticky': True})
 
-            sticky_protected_branches.write({'sticky': True})
-
-        if self.mr_only:
-            # Skip non-sticky non-merge proposal builds
-            branches = branch_obj.search([
-                ('sticky', '=', False),
-                ('repo_id', 'in', self.ids),
-                ('project_id', '=', False),
-                ('merge_request_id', '=', False),
-            ])
-            for build in self.env['runbot.build'].search([
-                    ('branch_id', 'in', branches.ids)]):
-                build.skip()
+        # Skip non-sticky non-merge proposal builds
+        branches = self.env['runbot.branch'].search([
+            ('sticky', '=', False),
+            ('repo_id', 'in', [i.id for i in self]),
+            ('project_id', '=', False),
+            ('merge_request_id', '=', False),
+        ])
+        for build in self.env['runbot.build'].search([
+                ('branch_id', 'in', [b.id for b in branches])]):
+            build.skip()
