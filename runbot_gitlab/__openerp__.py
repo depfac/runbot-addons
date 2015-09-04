@@ -44,6 +44,7 @@ Contributors
         'python': ['gitlab3', ]
     },
     'data': [
+        "views/runbot_repo_view.xml"
     ],
     'installable': True,
 }
