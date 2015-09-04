@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+    <template id="runbot-custom.build_button" inherit_id="runbot.build_button" name="View build">
+        <xpath expr='//li/a[starts-with(., "Full base logs")]' position="attributes">
+            <attribute name="t-if">bu['disable_base_log']!=True</attribute>
+        </xpath>
+        <xpath expr='//li/a[starts-with(., "Connect base")]' position="attributes">
+            <attribute name="t-if">bu['disable_base_log']!=True</attribute>
+        </xpath>
+    </template>
+</data>
+</openerp>

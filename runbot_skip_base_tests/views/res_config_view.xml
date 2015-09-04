@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+
+        <record id="view_runbot_configuration_inherit" model="ir.ui.view">
+            <field name="name">Configure Runbot</field>
+            <field name="model">runbot.config.settings</field>
+            <field name="inherit_id" ref="runbot.view_runbot_configuration"/>
+            <field name="arch" type="xml">
+                <xpath expr="//group[label[@string='Settings']]/div" position="inside">
+                    <div>
+                        <field name="default_disable_job_10" class="oe_inline" />
+                        <label for="default_disable_job_10" />
+                    </div>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</openerp>
