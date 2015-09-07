@@ -38,6 +38,7 @@ Contributors
     'author': "Eezee-It,Odoo Community Association (OCA)",
     'depends': ['runbot'],
     'data': [
+        "views/runbot_repo.xml",
     ],
     'installable': True,
 }

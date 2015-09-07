@@ -6,12 +6,8 @@
             <field name="model">runbot.repo</field>
             <field name="inherit_id" ref="runbot.view_repo_form"/>
             <field name="arch" type="xml">
-
-                <xpath expr="//sheet" position="inside">
-                    <group string="Gitlab" attrs="{'invisible': [('hosting', '!=', 'gitlab')]}">
-                        <field name="mr_only"/>
-                        <field name="sticky_protected"/>
-                    </group>
+                <xpath expr="//field[@name='nginx']" position="after">
+                    <field name="visible"/>
                 </xpath>
             </field>
         </record>

@@ -173,7 +173,7 @@ class RunbotRepo(models.Model):
 
     @api.multi
     def write(self, vals):
-        super(RunbotRepo, self).write(vals)
+        result = super(RunbotRepo, self).write(vals)
         for repo in self:
             if repo.hosting == 'gitlab':
                 set_gitlab_ci_conf(
@@ -182,6 +182,7 @@ class RunbotRepo(models.Model):
                     self.domain(),
                     self.id,
                 )
+        return result
 
     @api.one
     @gitlab_api
