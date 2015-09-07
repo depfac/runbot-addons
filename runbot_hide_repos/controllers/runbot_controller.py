@@ -23,7 +23,9 @@ from openerp import http
 
 from openerp.http import request
 
-from openerp.addons.runbot.runbot import RunbotController
+from openerp.addons.runbot.runbot import RunbotController, uniq_list, flatten
+from openerp.addons.website.models.website import slug
+from openerp.addons.website_sale.controllers.main import QueryURL
 
 
 class InheritRunbotController(RunbotController):
