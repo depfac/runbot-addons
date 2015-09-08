@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Author: Sylvain VanHoof
+#    Author: Sylvain Van Hoof
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
 #

@@ -33,7 +33,7 @@ class RunbotBuild(orm.Model):
         other_ids = []
         for build in self.browse(cr, uid, ids, context=context):
             if (build.branch_id.merge_request_id or
-                    '/' not in build.branch_id.name):
+                        '/' not in build.branch_id.name):
                 nickname = escape_branch_name(build.branch_id.name)
                 r[build.id] = "%05d-%s-%s" % (
                     build.id, nickname, build.name[:6]
@@ -47,5 +47,6 @@ class RunbotBuild(orm.Model):
         return r
 
     _columns = {
-        'dest': fields.function(_get_dest, type='char', string='Dest', readonly=1, store=True),
+        'dest': fields.function(_get_dest, type='char', string='Dest',
+                                readonly=1, store=True),
     }

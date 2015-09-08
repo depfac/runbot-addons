@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Author: Sylvain VanHoof
+#    Author: Sylvain Van Hoof
 #    Odoo, Open Source Management Solution
 #    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
 #
@@ -25,4 +25,5 @@ from openerp import models, fields
 class RunbotRepo(models.Model):
     _inherit = 'runbot.repo'
 
-    visible = fields.Boolean('Visible on the web interface of Runbot', default=True)
+    visible = fields.Boolean('Visible on the web interface of Runbot',
+                             default=True)

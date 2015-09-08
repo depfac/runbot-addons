@@ -32,12 +32,14 @@ def bitbucket(func):
     """Decorator for functions which should be overwritten only if
     this repo is bitbucket-.
     """
+
     def bitbucket(self, *args, **kwargs):
         if self.repo_id.hosting == 'bitbucket':
             return func(self, *args, **kwargs)
         else:
             regular_func = getattr(super(RunbotBranch, self), func.func_name)
             return regular_func(*args, **kwargs)
+
     return bitbucket
 
 
@@ -49,7 +51,8 @@ class RunbotBranch(models.Model):
     def _get_pull_info(self):
         self.ensure_one()
         repo = self.repo_id
-        if repo.username and repo.password and self.name.startswith('refs/pull/'):
+        if repo.username and repo.password and self.name.startswith(
+                'refs/pull/'):
             pull_number = self.name[len('refs/pull/'):]
             return repo.get_pull_request(pull_number) or {}
         return {}

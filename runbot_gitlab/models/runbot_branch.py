@@ -21,16 +21,19 @@
 ##############################################################################
 from openerp import models, fields, api
 
+
 def gitlab_api(func):
     """Decorator for functions which should be overwritten only if
     uses_gitlab is enabled in repo.
     """
+
     def gitlab_func(self, *args, **kwargs):
         if self.repo_id.hosting == 'gitlab':
             return func(self, *args, **kwargs)
         else:
             regular_func = getattr(super(RunbotBranch, self), func.func_name)
             return regular_func(*args, **kwargs)
+
     return gitlab_func
 
 
@@ -53,7 +56,8 @@ class RunbotBranch(models.Model):
     def get_pull_request_url(self, owner, repository, branch):
         self.ensure_one()
 
-        return "https://%s/merge_requests/%s" % (self.repo_id.base, self.merge_request_id)
+        return "https://%s/merge_requests/%s" % (
+        self.repo_id.base, self.merge_request_id)
 
     @api.multi
     @gitlab_api
@@ -69,6 +73,7 @@ class RunbotBranch(models.Model):
         repo = self.repo_id
         if repo.token and repo.name.startswith('refs/pull/'):
             pull_number = repo.name[len('refs/pull/'):]
-            return repo.github('/repos/:owner/:repo/pulls/%s' % pull_number, ignore_errors=True) or {}
+            return repo.github('/repos/:owner/:repo/pulls/%s' % pull_number,
+                               ignore_errors=True) or {}
 
         return {}

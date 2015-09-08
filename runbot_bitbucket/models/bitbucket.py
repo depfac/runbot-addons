@@ -28,8 +28,9 @@ class BitBucketHosting(hosting.Hosting):
     token = (())
 
     def __init__(self, credentials):
-        response = requests.post(self.URL + '/site/oauth2/access_token', auth=credentials,
-                                 data={'grant_type':'client_credentials'})
+        response = requests.post(self.URL + '/site/oauth2/access_token',
+                                 auth=credentials,
+                                 data={'grant_type': 'client_credentials'})
         self.token = response.json().get('access_token')
         super(BitBucketHosting, self).__init__()
 
@@ -39,10 +40,11 @@ class BitBucketHosting(hosting.Hosting):
 
     @classmethod
     def get_pull_request_url(cls, owner, repository, pull_number):
-        return cls.get_url('/%s/%s/pull-request/%s', owner, repository, pull_number)
-
+        return cls.get_url('/%s/%s/pull-request/%s', owner, repository,
+                           pull_number)
 
     def get_pull_request(self, owner, repository, pull_number):
-        url = self.get_api_url('/repositories/%s/%s/pullrequests/%s' % (owner, repository, pull_number))
+        url = self.get_api_url('/repositories/%s/%s/pullrequests/%s' % (
+        owner, repository, pull_number))
         reponse = self.session.get('%s?access_token=%s' % (url, self.token))
         return reponse.json()
