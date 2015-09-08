@@ -19,16 +19,4 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-{
-    'name': 'Runbot Restore DB',
-    'category': 'Website',
-    'summary': 'Runbot',
-    'version': '1.0',
-    'description': "Runbot",
-    'author': 'OpenERP SA, Eezee-It',
-    'depends': ['runbot'],
-    'data': [
-        'views/runbot.xml',
-    ],
-    'installable': True,
-}
+import runbot

@@ -1,42 +1,71 @@
+# -*- encoding: utf-8 -*-
+##############################################################################
+#
+#    Author: Sylvain Van Hoof
+#    Odoo, Open Source Management Solution
+#    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
 import os
 import time
 
 import openerp
-from openerp.osv import osv
 from openerp import models, fields, api
 from openerp.exceptions import Warning
 
 from openerp.addons.runbot import runbot
-from openerp.addons.runbot.runbot import log, dashes, mkdirs, grep, rfind, lock, locked, nowait, run, now, dt2time, s2human, flatten, decode_utf, uniq_list, fqdn
-from openerp.addons.runbot.runbot import _re_error, _re_warning, _re_job, _logger
-
+from openerp.addons.runbot.runbot import log, dashes, mkdirs, grep, rfind, \
+    lock, locked, nowait, run, now, dt2time, s2human, flatten, \
+    decode_utf, uniq_list, fqdn
+from openerp.addons.runbot.runbot import _re_error, _re_warning, \
+    _re_job, _logger
 
 loglevels = (('none', 'None'),
              ('warning', 'Warning'),
              ('error', 'Error'))
 
-class runbot_build(osv.osv):
+
+class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
-    def job_25_restore(self, cr, uid, build, lock_path, log_path):
+    @api.model
+    def job_25_restore(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
         cmd = "createdb -T %s %s-all" % (build.repo_id.db_name, build.dest)
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None, shell=True)
 
-    def job_26_upgrade(self, cr, uid, build, lock_path, log_path):
+    @api.model
+    def job_26_upgrade(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
         to_test = build.repo_id.modules if build.repo_id.modules else 'all'
         cmd, mods = build.cmd()
-        cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init', '--log-level=debug', '--test-enable']
+        cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
+                '--log-level=debug', '--test-enable']
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
 
-    def job_30_run(self, cr, uid, build, lock_path, log_path):
-        if build.repo_id.db_name and build.state == 'running' and build.result == "ko":
+    @api.model
+    def job_30_run(self, build, lock_path, log_path):
+        if build.repo_id.db_name and build.state == 'running' \
+                and build.result == "ko":
             return 0
         runbot._re_error = self._get_regexeforlog(build=build, errlevel='error')
-        runbot._re_warning = self._get_regexeforlog(build=build, errlevel='warning')
+        runbot._re_warning = self._get_regexeforlog(build=build,
+                                                    errlevel='warning')
 
         build._log('run', 'Start running build %s' % build.dest)
 
@@ -44,21 +73,24 @@ class runbot_build(osv.osv):
         result = "ok"
         log_names = [elmt.name for elmt in build.repo_id.parse_job_ids]
         for log_name in log_names:
-            log_all = build.path('logs', log_name+'.txt')
+            log_all = build.path('logs', log_name + '.txt')
             if grep(log_all, ".modules.loading: Modules loaded."):
                 if rfind(log_all, _re_error):
                     result = "ko"
                     break;
                 elif rfind(log_all, _re_warning):
                     result = "warn"
-                elif not grep(build.server("test/common.py"), "post_install") or grep(log_all, "Initiating shutdown."):
+                elif not grep(build.server("test/common.py"),
+                              "post_install") or grep(log_all,
+                                                      "Initiating shutdown."):
                     if result != "warn":
                         result = "ok"
             else:
                 result = "ko"
                 break;
             log_time = time.localtime(os.path.getmtime(log_all))
-            v['job_end'] = time.strftime(openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT, log_time)
+            v['job_end'] = time.strftime(
+                openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT, log_time)
         v['result'] = result
         build.write(v)
         build.github_status()
@@ -77,9 +109,9 @@ class runbot_build(osv.osv):
 
         if grep(build.server("tools/config.py"), "db-filter"):
             if build.repo_id.nginx:
-                cmd += ['--db-filter','%d.*$']
+                cmd += ['--db-filter', '%d.*$']
             else:
-                cmd += ['--db-filter','%s.*$' % build.dest]
+                cmd += ['--db-filter', '%s.*$' % build.dest]
 
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
 
@@ -91,50 +123,52 @@ class runbot_build(osv.osv):
                 regex += "|"
             else:
                 addederror = True
-            regex +="(ERROR)"
+            regex += "(ERROR)"
         if build.repo_id.critical == errlevel:
             if addederror:
                 regex += "|"
             else:
                 addederror = True
-            regex +="(CRITICAL)"
+            regex += "(CRITICAL)"
         if build.repo_id.warning == errlevel:
             if addederror:
                 regex += "|"
             else:
                 addederror = True
-            regex +="(WARNING)"
+            regex += "(WARNING)"
         if build.repo_id.failed == errlevel:
             if addederror:
                 regex += "|"
             else:
                 addederror = True
-            regex +="(TEST.*FAIL)"
+            regex += "(TEST.*FAIL)"
         if build.repo_id.traceback == errlevel:
             if addederror:
                 regex = '(Traceback \(most recent call last\))|(%s)' % regex
             else:
                 regex = '(Traceback \(most recent call last\))'
-        #regex = '^' + regex + '$'
+        # regex = '^' + regex + '$'
         return regex
 
-    def schedule(self, cr, uid, ids, context=None):
+    @api.multi
+    def schedule(self):
         """
         /!\ must rewrite the all method because for each build we need
             to remove jobs that were specified as skipped in the repo.
         """
         all_jobs = self.list_jobs()
-        icp = self.pool['ir.config_parameter']
-        default_timeout = int(icp.get_param(cr, uid, 'runbot.timeout', default=1800)) / 60
+        icp = self.env['ir.config_parameter']
+        default_timeout = int(
+            icp.get_param('runbot.timeout', default=1800)) / 60
 
-        for build in self.browse(cr, uid, ids, context=context):
-            #remove skipped jobs
+        for build in self:
+            # remove skipped jobs
             jobs = all_jobs[:]
             for job_to_skip in build.repo_id.skip_job_ids:
                 jobs.remove(job_to_skip.name)
             if build.state == 'pending':
                 # allocate port and schedule first job
-                port = self.find_port(cr, uid)
+                port = self.find_port(self.env.cr, self.env.uid)
                 values = {
                     'host': fqdn(),
                     'port': port,
@@ -144,15 +178,18 @@ class runbot_build(osv.osv):
                     'job_end': False,
                 }
                 build.write(values)
-                cr.commit()
+                self.env.cr.commit()
             else:
                 # check if current job is finished
                 lock_path = build.path('logs', '%s.lock' % build.job)
                 if locked(lock_path):
                     # kill if overpassed
-                    timeout = (build.branch_id.job_timeout or default_timeout) * 60
+                    timeout = (
+                              build.branch_id.job_timeout
+                              or default_timeout) * 60
                     if build.job != jobs[-1] and build.job_time > timeout:
-                        build.logger('%s time exceded (%ss)', build.job, build.job_time)
+                        build.logger('%s time exceded (%ss)', build.job,
+                                     build.job_time)
                         build.kill(result='killed')
                     continue
                 build.logger('%s finished', build.job)
@@ -177,14 +214,15 @@ class runbot_build(osv.osv):
             pid = None
             if build.state != 'done':
                 build.logger('running %s', build.job)
-                job_method = getattr(self,build.job)
+                job_method = getattr(self, build.job)
                 mkdirs([build.path('logs')])
                 lock_path = build.path('logs', '%s.lock' % build.job)
                 log_path = build.path('logs', '%s.txt' % build.job)
-                pid = job_method(cr, uid, build, lock_path, log_path)
+                pid = job_method(build, lock_path, log_path)
                 build.write({'pid': pid})
-            # needed to prevent losing pids if multiple jobs are started and one them raise an exception
-            cr.commit()
+            # needed to prevent losing pids if multiple jobs are started
+            # and one them raise an exception
+            self.env.cr.commit()
 
             if pid == -2:
                 # no process to wait, directly call next job
@@ -194,6 +232,7 @@ class runbot_build(osv.osv):
             # cleanup only needed if it was not killed
             if build.state == 'done':
                 build.cleanup()
+
 
 class RunbotJob(models.Model):
     _name = "runbot.job"
@@ -221,11 +260,13 @@ class RunbotRepo(models.Model):
     sequence = fields.Integer('Sequence of display', select=True)
     error = fields.Selection(loglevels, 'Error messages', default='error')
     critical = fields.Selection(loglevels, 'Critical messages', default='error')
-    traceback = fields.Selection(loglevels, 'Traceback messages', default='error')
+    traceback = fields.Selection(loglevels, 'Traceback messages',
+                                 default='error')
     warning = fields.Selection(loglevels, 'Warning messages', default='warning')
     failed = fields.Selection(loglevels, 'Failed messages', default='none')
     skip_job_ids = fields.Many2many('runbot.job', string='Jobs to skip')
-    parse_job_ids = fields.Many2many('runbot.job', "repo_parse_job_rel", string='Jobs to parse')
+    parse_job_ids = fields.Many2many('runbot.job', "repo_parse_job_rel",
+                                     string='Jobs to parse')
 
     @api.onchange('db_name')
     @api.constrains('db_name')
@@ -242,9 +283,10 @@ class RunbotRepo(models.Model):
 
     _order = 'sequence'
 
-class RunbotControllerPS(runbot.RunbotController):
 
+class RunbotControllerPS(runbot.RunbotController):
     def build_info(self, build):
         res = super(RunbotControllerPS, self).build_info(build)
-        res['parse_job_ids'] = [elmt.name for elmt in build.repo_id.parse_job_ids]
+        res['parse_job_ids'] = [elmt.name for elmt in
+                                build.repo_id.parse_job_ids]
         return res
