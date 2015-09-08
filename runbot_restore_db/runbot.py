@@ -1,12 +1,11 @@
-import psutil
-import datetime
 import os
-import re
-import signal
 import time
 
 import openerp
-from openerp.osv import fields, osv
+from openerp.osv import osv
+from openerp import models, fields, api
+from openerp.exceptions import Warning
+
 from openerp.addons.runbot import runbot
 from openerp.addons.runbot.runbot import log, dashes, mkdirs, grep, rfind, lock, locked, nowait, run, now, dt2time, s2human, flatten, decode_utf, uniq_list, fqdn
 from openerp.addons.runbot.runbot import _re_error, _re_warning, _re_job, _logger
@@ -18,17 +17,6 @@ loglevels = (('none', 'None'),
 
 class runbot_build(osv.osv):
     _inherit = "runbot.build"
-
-    # I disable this job because Runbot already remove and kill build
-    # def job_21_checkdeadbuild(self, cr, uid, build, lock_path, log_path):
-    #     for proc in psutil.process_iter():
-    #         if proc.name in ('openerp', 'python', 'openerp-server'):
-    #             lgn = proc.cmdline
-    #             if ('--xmlrpc-port=%s' % build.port) in lgn:
-    #                 try:
-    #                     os.killpg(proc.pid, signal.SIGKILL)
-    #                 except OSError:
-    #                     pass
 
     def job_25_restore(self, cr, uid, build, lock_path, log_path):
         if not build.repo_id.db_name:
@@ -207,56 +195,52 @@ class runbot_build(osv.osv):
             if build.state == 'done':
                 build.cleanup()
 
-class job(osv.Model):
+class RunbotJob(models.Model):
     _name = "runbot.job"
 
-    _columns = {
-        'name': fields.char("Job name")
-    }
+    name = fields.Char("Job name")
 
-class runbot_repo(osv.Model):
+
+class RunbotRepo(models.Model):
     _inherit = "runbot.repo"
 
-    def cron_update_job(self, cr, uid, context=None):
-        build_obj = self.pool.get('runbot.build')
+    @api.model
+    def cron_update_job(self):
+        build_obj = self.env['runbot.build']
         jobs = build_obj.list_jobs()
-        job_obj = self.pool.get('runbot.job')
+        job_obj = self.env['runbot.job']
         for job_name in jobs:
-            job_id = job_obj.search(cr, uid, [('name', '=', job_name)])
-            if not job_id:
-                job_obj.create(cr, uid, {'name': job_name})
-        job_to_rm_ids = job_obj.search(cr, 1, [('name', 'not in', jobs)])
-        job_obj.unlink(cr, uid, job_to_rm_ids)
+            job = job_obj.search([('name', '=', job_name)])
+            if not job:
+                job_obj.create({'name': job_name})
+        job_to_rm = job_obj.sudo().search([('name', 'not in', jobs)])
+        job_to_rm.unlink()
         return True
 
-    _columns = {
-        'db_name': fields.char("Database name to replicate"),
-        'sequence': fields.integer('Sequence of display', select=True),
-        'error': fields.selection(loglevels, 'Error messages'),
-        'critical': fields.selection(loglevels, 'Critical messages'),
-        'traceback': fields.selection(loglevels, 'Traceback messages'),
-        'warning': fields.selection(loglevels, 'Warning messages'),
-        'failed': fields.selection(loglevels, 'Failed messages'),
-        'skip_job_ids': fields.many2many('runbot.job', string='Jobs to skip'),
-        'parse_job_ids': fields.many2many('runbot.job', "repo_parse_job_rel", string='Jobs to parse'),
-    }
+    db_name = fields.Char("Database name to replicate")
+    sequence = fields.Integer('Sequence of display', select=True)
+    error = fields.Selection(loglevels, 'Error messages', default='error')
+    critical = fields.Selection(loglevels, 'Critical messages', default='error')
+    traceback = fields.Selection(loglevels, 'Traceback messages', default='error')
+    warning = fields.Selection(loglevels, 'Warning messages', default='warning')
+    failed = fields.Selection(loglevels, 'Failed messages', default='none')
+    skip_job_ids = fields.Many2many('runbot.job', string='Jobs to skip')
+    parse_job_ids = fields.Many2many('runbot.job', "repo_parse_job_rel", string='Jobs to parse')
 
-    _defaults = {
-        'error': 'error',
-        'critical': 'error',
-        'traceback': 'error',
-        'warning': 'warning',
-        'failed': 'none',
-    }
+    @api.onchange('db_name')
+    @api.constrains('db_name')
+    @api.one
+    def onchange_db_name(self):
+        if not self.db_name:
+            return
+        try:
+            db = openerp.sql_db.db_connect(self.db_name)
+            db_cursor = db.cursor()
+        except:
+            raise Warning('The database "%s" doesn\'t exist' % self.db_name)
+        db_cursor.close()
 
     _order = 'sequence'
-
-    # def update_git(self, cr, uid, repo, context=None):
-    #     super(runbot_repo, self).update_git(cr, uid, repo, context)
-    #     if repo.nobuild:
-    #         bds = self.pool['runbot.build']
-    #         bds_ids = bds.search(cr, uid, [('repo_id', '=', repo.id), ('state', '=', 'pending')], context=context)
-    #         bds.write(cr, uid, bds_ids, {'state': 'done'}, context=context)
 
 class RunbotControllerPS(runbot.RunbotController):
 
