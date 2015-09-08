@@ -21,6 +21,8 @@
 ##############################################################################
 import os
 import time
+import signal
+import psutil
 
 import openerp
 from openerp import models, fields, api
@@ -40,6 +42,17 @@ loglevels = (('none', 'None'),
 
 class RunbotBuild(models.Model):
     _inherit = "runbot.build"
+
+    @api.model
+    def job_21_checkdeadbuild(self, build, lock_path, log_path):
+        for proc in psutil.process_iter():
+            if proc.name in ('openerp', 'python', 'openerp-server', 'odoo'):
+                lgn = proc.cmdline
+                if ('--xmlrpc-port=%s' % build.port) in lgn:
+                    try:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    except OSError:
+                        pass
 
     @api.model
     def job_25_restore(self, build, lock_path, log_path):
