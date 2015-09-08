@@ -168,7 +168,7 @@ class RunbotBuild(models.Model):
                 jobs.remove(job_to_skip.name)
             if build.state == 'pending':
                 # allocate port and schedule first job
-                port = self.find_port(self.env.cr, self.env.uid)
+                port = self.find_port()
                 values = {
                     'host': fqdn(),
                     'port': port,
