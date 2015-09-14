@@ -19,5 +19,13 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import models
-import controllers
+
+from openerp.addons.runbot import runbot
+
+
+class RunbotControllerPS(runbot.RunbotController):
+    def build_info(self, build):
+        res = super(RunbotControllerPS, self).build_info(build)
+        res['parse_job_ids'] = [elmt.name for elmt in
+                                build.repo_id.parse_job_ids]
+        return res

@@ -19,5 +19,31 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import models
-import controllers
+from openerp import models, fields, api
+
+
+class RunbotJob(models.Model):
+    _name = "runbot.job"
+
+    name = fields.Char("Job name")
+
+
+class RunbotRepo(models.Model):
+    _inherit = "runbot.repo"
+
+    @api.model
+    def cron_update_job(self):
+        build_obj = self.env['runbot.build']
+        jobs = build_obj.list_jobs()
+        job_obj = self.env['runbot.job']
+        for job_name in jobs:
+            job = job_obj.search([('name', '=', job_name)])
+            if not job:
+                job_obj.create({'name': job_name})
+        job_to_rm = job_obj.sudo().search([('name', 'not in', jobs)])
+        job_to_rm.unlink()
+        return True
+
+    skip_job_ids = fields.Many2many('runbot.job', string='Jobs to skip')
+    parse_job_ids = fields.Many2many('runbot.job', "repo_parse_job_rel",
+                                     string='Jobs to parse')

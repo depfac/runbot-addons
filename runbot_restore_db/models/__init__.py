@@ -19,4 +19,5 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import runbot
+from . import runbot_build
+from . import runbot_repo
