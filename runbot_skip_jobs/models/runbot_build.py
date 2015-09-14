@@ -21,105 +21,44 @@
 ##############################################################################
 import os
 import time
-import signal
-import psutil
-import threading
-import traceback
-
 import openerp
-from openerp import models, fields, api
-from openerp.exceptions import Warning
-
+from openerp import models, api
 from openerp.addons.runbot import runbot
-from openerp.addons.runbot.runbot import log, dashes, mkdirs, grep, rfind, \
-    lock, locked, nowait, run, now, dt2time, s2human, flatten, \
-    decode_utf, uniq_list, fqdn
-from openerp.addons.runbot.runbot import _re_error, _re_warning, \
-    _re_job, _logger
-
-loglevels = (('none', 'None'),
-             ('warning', 'Warning'),
-             ('error', 'Error'))
 
 
 class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
     @api.model
-    def job_21_checkdeadbuild(self, build, lock_path, log_path):
-        for proc in psutil.process_iter():
-            if proc.name in ('openerp', 'python', 'openerp-server', 'odoo'):
-                lgn = proc.cmdline
-                if ('--xmlrpc-port=%s' % build.port) in lgn:
-                    try:
-                        os.killpg(proc.pid, signal.SIGKILL)
-                    except OSError:
-                        pass
-
-    @api.model
-    def job_25_restore(self, build, lock_path, log_path):
-        if not build.repo_id.db_name:
-            return 0
-        cmd = "createdb -T %s %s-all" % (build.repo_id.db_name, build.dest)
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None, shell=True)
-
-    @api.model
-    def job_26_upgrade(self, build, lock_path, log_path):
-        if not build.repo_id.db_name:
-            return 0
-        to_test = build.repo_id.modules if build.repo_id.modules else 'all'
-
-        # Odoo doesn't start test if the module has no demo data
-        # However, we wan't to have demo data to tests ours projects
-        # To fix that, I set the flag demo on ir_module_module for each
-        # module we want to check
-        query = "UPDATE ir_module_module SET demo = True"
-        if to_test != 'all':
-            query += " WHERE name IN ('%s');" % "','".join(to_test.split(','))
-        db = openerp.sql_db.db_connect('%s-all' % build.dest)
-        threading.current_thread().dbname = '%s-all' % build.dest
-        build_cr = db.cursor()
-
-        try:
-            # Check if the module account is installed
-            build_cr.execute(query)
-        except:
-            _logger.error("Error during the execution of the querye '%s' "
-                          "on the DB '%s'" % (query, '%s-all' % build.dest))
-        finally:
-            # Close and restore the new cursor
-            build_cr.close()
-            threading.current_thread().dbname = self.env.cr.dbname
-
-        cmd, mods = build.cmd()
-        cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
-                '--log-level=debug', '--test-enable']
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
-
-    @api.model
     def job_30_run(self, build, lock_path, log_path):
-        if build.repo_id.db_name and build.state == 'running' \
-                and build.result == "ko":
-            return 0
-        runbot._re_error = self._get_regexeforlog(build=build, errlevel='error')
-        runbot._re_warning = self._get_regexeforlog(build=build,
-                                                    errlevel='warning')
+        """
+        Redefine this job to avoid ERROR on empty logs like db restore
+        :param build:
+        :param lock_path:
+        :param log_path:
+        :return:
+        """
+        # if build.repo_id.db_name and build.state == 'running' \
+        #         and build.result == "ko":
+        #     return 0
 
-        build._log('run', 'Start running build %s' % build.dest)
+        # parse logs (only ones that have been chosen)
+        runbot._re_error = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (ERROR)'
+        runbot._re_warning = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (WARNING)'
 
         v = {}
         result = "ok"
         log_names = [elmt.name for elmt in build.repo_id.parse_job_ids]
         for log_name in log_names:
             log_all = build.path('logs', log_name + '.txt')
-            if grep(log_all, ".modules.loading: Modules loaded."):
-                if rfind(log_all, _re_error):
+            if runbot.grep(log_all, ".modules.loading: Modules loaded."):
+                if runbot.rfind(log_all, runbot._re_error):
                     result = "ko"
                     break;
-                elif rfind(log_all, _re_warning):
+                elif runbot.rfind(log_all, runbot._re_warning):
                     result = "warn"
-                elif not grep(build.server("test/common.py"),
-                              "post_install") or grep(log_all,
+                elif not runbot.grep(build.server("test/common.py"),
+                              "post_install") or runbot.grep(log_all,
                                                       "Initiating shutdown."):
                     if result != "warn":
                         result = "ok"
@@ -135,6 +74,7 @@ class RunbotBuild(models.Model):
         build.github_status()
 
         # run server
+        build._log('run', 'Start running build %s' % build.dest)
         cmd, mods = build.cmd()
         if os.path.exists(build.server('addons/im_livechat')):
             cmd += ["--workers", "2"]
@@ -146,48 +86,13 @@ class RunbotBuild(models.Model):
 
         cmd += ['-d', "%s-all" % build.dest]
 
-        if grep(build.server("tools/config.py"), "db-filter"):
+        if runbot.grep(build.server("tools/config.py"), "db-filter"):
             if build.repo_id.nginx:
                 cmd += ['--db-filter', '%d.*$']
             else:
                 cmd += ['--db-filter', '%s.*$' % build.dest]
 
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
-
-    def _get_regexeforlog(self, build, errlevel):
-        addederror = False
-        regex = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ '
-        if build.repo_id.error == errlevel:
-            if addederror:
-                regex += "|"
-            else:
-                addederror = True
-            regex += "(ERROR)"
-        if build.repo_id.critical == errlevel:
-            if addederror:
-                regex += "|"
-            else:
-                addederror = True
-            regex += "(CRITICAL)"
-        if build.repo_id.warning == errlevel:
-            if addederror:
-                regex += "|"
-            else:
-                addederror = True
-            regex += "(WARNING)"
-        if build.repo_id.failed == errlevel:
-            if addederror:
-                regex += "|"
-            else:
-                addederror = True
-            regex += "(TEST.*FAIL)"
-        if build.repo_id.traceback == errlevel:
-            if addederror:
-                regex = '(Traceback \(most recent call last\))|(%s)' % regex
-            else:
-                regex = '(Traceback \(most recent call last\))'
-        # regex = '^' + regex + '$'
-        return regex
 
     @api.multi
     def schedule(self):
@@ -209,11 +114,11 @@ class RunbotBuild(models.Model):
                 # allocate port and schedule first job
                 port = self.find_port()
                 values = {
-                    'host': fqdn(),
+                    'host': runbot.fqdn(),
                     'port': port,
                     'state': 'testing',
                     'job': jobs[0],
-                    'job_start': now(),
+                    'job_start': runbot.now(),
                     'job_end': False,
                 }
                 build.write(values)
@@ -221,7 +126,7 @@ class RunbotBuild(models.Model):
             else:
                 # check if current job is finished
                 lock_path = build.path('logs', '%s.lock' % build.job)
-                if locked(lock_path):
+                if runbot.locked(lock_path):
                     # kill if overpassed
                     timeout = (
                               build.branch_id.job_timeout
@@ -238,7 +143,7 @@ class RunbotBuild(models.Model):
                 if build.job == jobs[-2]:
                     v['state'] = 'running'
                     v['job'] = jobs[-1]
-                    v['job_end'] = now(),
+                    v['job_end'] = runbot.now(),
                 # running -> done
                 elif build.job == jobs[-1]:
                     v['state'] = 'done'
@@ -254,7 +159,7 @@ class RunbotBuild(models.Model):
             if build.state != 'done':
                 build.logger('running %s', build.job)
                 job_method = getattr(self, build.job)
-                mkdirs([build.path('logs')])
+                runbot.mkdirs([build.path('logs')])
                 lock_path = build.path('logs', '%s.lock' % build.job)
                 log_path = build.path('logs', '%s.txt' % build.job)
                 pid = job_method(build, lock_path, log_path)
@@ -271,61 +176,3 @@ class RunbotBuild(models.Model):
             # cleanup only needed if it was not killed
             if build.state == 'done':
                 build.cleanup()
-
-
-class RunbotJob(models.Model):
-    _name = "runbot.job"
-
-    name = fields.Char("Job name")
-
-
-class RunbotRepo(models.Model):
-    _inherit = "runbot.repo"
-
-    @api.model
-    def cron_update_job(self):
-        build_obj = self.env['runbot.build']
-        jobs = build_obj.list_jobs()
-        job_obj = self.env['runbot.job']
-        for job_name in jobs:
-            job = job_obj.search([('name', '=', job_name)])
-            if not job:
-                job_obj.create({'name': job_name})
-        job_to_rm = job_obj.sudo().search([('name', 'not in', jobs)])
-        job_to_rm.unlink()
-        return True
-
-    db_name = fields.Char("Database name to replicate")
-    sequence = fields.Integer('Sequence of display', select=True)
-    error = fields.Selection(loglevels, 'Error messages', default='error')
-    critical = fields.Selection(loglevels, 'Critical messages', default='error')
-    traceback = fields.Selection(loglevels, 'Traceback messages',
-                                 default='error')
-    warning = fields.Selection(loglevels, 'Warning messages', default='warning')
-    failed = fields.Selection(loglevels, 'Failed messages', default='none')
-    skip_job_ids = fields.Many2many('runbot.job', string='Jobs to skip')
-    parse_job_ids = fields.Many2many('runbot.job', "repo_parse_job_rel",
-                                     string='Jobs to parse')
-
-    @api.onchange('db_name')
-    @api.constrains('db_name')
-    @api.one
-    def onchange_db_name(self):
-        if not self.db_name:
-            return
-        try:
-            db = openerp.sql_db.db_connect(self.db_name)
-            db_cursor = db.cursor()
-        except:
-            raise Warning('The database "%s" doesn\'t exist' % self.db_name)
-        db_cursor.close()
-
-    _order = 'sequence'
-
-
-class RunbotControllerPS(runbot.RunbotController):
-    def build_info(self, build):
-        res = super(RunbotControllerPS, self).build_info(build)
-        res['parse_job_ids'] = [elmt.name for elmt in
-                                build.repo_id.parse_job_ids]
-        return res

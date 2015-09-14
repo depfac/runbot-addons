@@ -45,7 +45,7 @@ class RunbotBuild(models.Model):
         to_test = build.repo_id.modules if build.repo_id.modules else 'all'
         cmd, mods = build.cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
-                '--test-enable']
+                '--log-level=debug', '--test-enable']
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     @api.model
