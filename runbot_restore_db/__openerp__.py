@@ -26,7 +26,8 @@
     'version': '1.0',
     'description': "Runbot",
     'author': 'OpenERP SA, Eezee-It',
-    'depends': ['runbot'],
+    'depends': ['runbot',
+                'runbot_skip_jobs'],
     'data': [
         'views/runbot.xml',
     ],

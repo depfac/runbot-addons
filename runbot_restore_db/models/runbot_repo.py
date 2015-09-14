@@ -19,5 +19,25 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import models
-import controllers
+
+import openerp
+from openerp import models, fields, api
+from openerp.exceptions import Warning
+
+class RunbotRepo(models.Model):
+    _inherit = "runbot.repo"
+
+    db_name = fields.Char("Database name to replicate")
+
+    @api.onchange('db_name')
+    @api.constrains('db_name')
+    @api.one
+    def onchange_db_name(self):
+        if not self.db_name:
+            return
+        try:
+            db = openerp.sql_db.db_connect(self.db_name)
+            db_cursor = db.cursor()
+        except:
+            raise Warning('The database "%s" doesn\'t exist' % self.db_name)
+        db_cursor.close()
