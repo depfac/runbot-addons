@@ -19,5 +19,16 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import models
-import controllers
+{
+    'name': 'Runbot Skip Jobs',
+    'category': 'Website',
+    'summary': 'Runbot',
+    'version': '1.0',
+    'description': "Runbot",
+    'author': 'OpenERP SA, Niboo, Eezee-It',
+    'depends': ['runbot'],
+    'data': [
+        'views/runbot.xml',
+    ],
+    'installable': True,
+}
