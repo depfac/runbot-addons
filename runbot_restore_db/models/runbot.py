@@ -23,8 +23,6 @@ import os
 import time
 import signal
 import psutil
-import threading
-import traceback
 
 import openerp
 from openerp import models, fields, api
@@ -68,29 +66,6 @@ class RunbotBuild(models.Model):
         if not build.repo_id.db_name:
             return 0
         to_test = build.repo_id.modules if build.repo_id.modules else 'all'
-
-        # Odoo doesn't start test if the module has no demo data
-        # However, we wan't to have demo data to tests ours projects
-        # To fix that, I set the flag demo on ir_module_module for each
-        # module we want to check
-        query = "UPDATE ir_module_module SET demo = True"
-        if to_test != 'all':
-            query += " WHERE name IN ('%s');" % "','".join(to_test.split(','))
-        db = openerp.sql_db.db_connect('%s-all' % build.dest)
-        threading.current_thread().dbname = '%s-all' % build.dest
-        build_cr = db.cursor()
-
-        try:
-            # Check if the module account is installed
-            build_cr.execute(query)
-        except:
-            _logger.error("Error during the execution of the querye '%s' "
-                          "on the DB '%s'" % (query, '%s-all' % build.dest))
-        finally:
-            # Close and restore the new cursor
-            build_cr.close()
-            threading.current_thread().dbname = self.env.cr.dbname
-
         cmd, mods = build.cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
                 '--log-level=debug', '--test-enable']
