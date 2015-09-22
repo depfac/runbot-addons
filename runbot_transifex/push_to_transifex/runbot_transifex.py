@@ -13,19 +13,17 @@ parser.add_argument('addons', action='store', help='Odoo Addons')
 parser.add_argument('db_name', action='store', help='Odoo DB name')
 parser.add_argument('server_path', action='store', help='Odoo Server Path')
 parser.add_argument('addons_path', action='store', help='Odoo Addons Path')
+parser.add_argument('project_name', action='store', help='Transifex Project Name')
+parser.add_argument('project_shortcut', action='store', help='Transifex Project Shortcut')
+parser.add_argument('project_organization', action='store', help='Transifex Project Organization')
 parser.add_argument('--odoo_version', action='store', help='Odoo Version', default='8.0')
+parser.add_argument('--fillup-resources', action='store_true', default=False, dest='fillup-resources', help='If the system should fill up resources automatically with 100% similar matches from the Translation Memory')
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 
 
 def main(argv=None):
-    TRANSIFEX_PROJECT_SHORTNAME = 'wln'
-    TRANSIFEX_PROJECT_NAME = 'Worldline'
-    TRANSIFEX_ORGANIZATION = 'DepFac'
-    TRANSIFEX_FILL_UP_RESOURCES = True
-
     result = parser.parse_args()
     arguments = dict(result._get_kwargs())
-    print arguments
 
     transifex_user = arguments['tx_login']
     transifex_password = arguments['tx_passwd']
@@ -33,15 +31,18 @@ def main(argv=None):
     db_name = arguments['db_name']
     server_path = arguments['server_path']
     addons_path = arguments['addons_path']
+    project_name = arguments['project_name']
+    project_shortcut = arguments['project_shortcut']
+    project_organization = arguments['project_organization']
     odoo_version = arguments.get('odoo_version')
+    transifex_fill_up_resources = arguments.get('fillup-resources', False)
 
     addons = addons_str.split(',')
 
-    transifex_project_name = "%s (%s)" % (TRANSIFEX_PROJECT_NAME, odoo_version)
-    transifex_project_slug = "%s-%s" % (TRANSIFEX_PROJECT_SHORTNAME,
+    transifex_project_name = "%s (%s)" % (project_name, odoo_version)
+    transifex_project_slug = "%s-%s" % (project_shortcut,
                                       odoo_version.replace('.', '-'))
-    transifex_fill_up_resources = TRANSIFEX_FILL_UP_RESOURCES
-    transifex_organization = TRANSIFEX_ORGANIZATION
+    transifex_organization = project_organization
 
     # Create Transifex project if it doesn't exist
     print
@@ -54,7 +55,7 @@ def main(argv=None):
                     "source_language_code": "en",
                     "description": transifex_project_name,
                     "source_language_code": 'en_US',
-                    "organization": TRANSIFEX_ORGANIZATION,
+                    "organization": project_organization,
                     "private": True,
                     "fill_up_resources": transifex_fill_up_resources,
                     }
@@ -93,7 +94,7 @@ def main(argv=None):
         for module in addons:
             print
             print "Downloading PO file for %s" % module
-            source_filename = os.path.join('/tmp', module, 'i18n',
+            source_filename = os.path.join(server_path, module, 'i18n',
                                            module + ".pot")
             # Create i18n/ directory if doesn't exist
             if not os.path.exists(os.path.dirname(source_filename)):

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_repo_form" model="ir.ui.view">
+            <field name="model">runbot.repo</field>
+            <field name="inherit_id" ref="runbot.view_repo_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//sheet" position="inside">
+                    <group string="Transifex">
+                        <field name="is_transifex_project"/>
+                        <field name="branch_triggered_ids" widget="many2many_tags" attrs="{'invisible': [('is_transifex_project', '!=', True)]}" domain="[('repo_id', '=', id)]"/>
+                        <field name="project_name"  attrs="{'invisible': [('is_transifex_project', '!=', True)], 'required': [('is_transifex_project', '=', True)]}"/>
+                        <field name="project_shortcut"  attrs="{'invisible': [('is_transifex_project', '!=', True)], 'required': [('is_transifex_project', '=', True)]}"/>
+                        <field name="project_organization" attrs="{'invisible': [('is_transifex_project', '!=', True)], 'required': [('is_transifex_project', '=', True)]}"/>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</openerp>

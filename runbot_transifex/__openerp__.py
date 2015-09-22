@@ -41,7 +41,9 @@ Contributors
     'author': "Eezee-It,Niboo,Odoo Community Association (OCA)",
     'depends': ['runbot'],
     'data': [
-        "views/runbot_config_settings_view.xml"
+        "views/runbot_config_settings_view.xml",
+        "views/runbot.xml",
+        "security/ir.model.access.csv",
     ],
     'installable': True,
 }
