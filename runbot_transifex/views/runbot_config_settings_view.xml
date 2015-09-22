@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data>
+        <record id="view_runbot_configuration_inherit" model="ir.ui.view">
+            <field name="name">Configure Runbot</field>
+            <field name="model">runbot.config.settings</field>
+            <field name="inherit_id" ref="runbot.view_runbot_configuration"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form/group" position="after">
+                    <separator string="Transifex"/>
+                    <group>
+                        <label for="id" string="Settings"/>
+                        <div>
+                            <div>
+                                <field name="transifex_login" class="oe_inline"/>
+                                <label for="transifex_login"/>
+                            </div>
+                            <div>
+                                <field name="transifex_password" class="oe_inline"/>
+                                <label for="transifex_password"/>
+                            </div>
+                        </div>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</openerp>
