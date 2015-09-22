@@ -76,6 +76,8 @@ class Odoo8Context(_OdooBaseContext):
         config['addons_path'] = (
             config.get('addons_path') + ',' + self.addons_path
         )
+        config['db_user'] = 'odoo'
+        config['db_password'] = 'odoo'
         registry = RegistryManager.new(self.dbname)
         self.environment_manage = api.Environment.manage()
         self.environment_manage.__enter__()

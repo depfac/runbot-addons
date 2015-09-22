@@ -20,5 +20,15 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-import odoo_connection
-import runbot_transifex
+from openerp import models, api, fields
+
+
+class RunbotRepo(models.Model):
+    _inherit = 'runbot.repo'
+
+    is_transifex_project = fields.Boolean('Use Transifex to manage translations', default=False)
+    branch_triggered_ids = fields.Many2many('runbot.branch', string='Branches to trigger',
+                                           help="For each builds of following branches, the system will update translations")
+    project_name = fields.Char('Project Name')
+    project_shortcut = fields.Char('Project Shorcut')
+    project_organization = fields.Char('Project Organization')
