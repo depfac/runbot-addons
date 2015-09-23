@@ -45,5 +45,8 @@ Contributors
         "views/runbot.xml",
         "security/ir.model.access.csv",
     ],
+    'external_dependencies': {
+        'python': ['gitlab3', 'github3', 'txclib']
+    },
     'installable': True,
 }
