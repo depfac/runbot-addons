@@ -35,10 +35,6 @@ class RunbotBuild(models.Model):
     _inherit = 'runbot.build'
 
     @api.model
-    def job_22_pull_translation_from_transifex(self, build, lock_path, log_path):
-        return 0
-
-    @api.model
     def job_99_push_translation_to_transifex(self, build, lock_path, log_path):
         repo = build.repo_id
         branch = build.branch_id
@@ -58,4 +54,4 @@ class RunbotBuild(models.Model):
 
         _logger.info('Login: %s - Password: %s - Addons: %s, DB Name: %s - Server path: %s - Addons path: %s' %
                      (transifex_login, re.sub(r'.', '*', transifex_password), addons, db_name, server_path, addons_path))
-        return runbot_transifex(transifex_login, transifex_password, addons, db_name, server_path, addons_path)
+        return runbot_transifex.main(transifex_login, transifex_password, addons, db_name, server_path, addons_path)
