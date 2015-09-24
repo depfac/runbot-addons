@@ -93,6 +93,8 @@ import gitlab3
 
 import polib
 from slumber import API, exceptions
+from pygit2 import Repository, Signature
+from pygit2 import GIT_FILEMODE_TREE, GIT_FILEMODE_BLOB
 
 
 parser = argparse.ArgumentParser(
@@ -104,8 +106,8 @@ parser.add_argument('tx_organization', help='Transifex Organization')
 parser.add_argument('tx_project_shortcut', help='Transifex Project Shortcut')
 parser.add_argument('gitlab_url', help='GitLab URL')
 parser.add_argument('gitlab_token', help='GitLab Token')
-parser.add_argument('gitlab_email', help='GitLab Email')
 parser.add_argument('gitlab_repo_url', help='GitLab Rpo URL')
+parser.add_argument('bare_repo_path', help='Bare Repo Path')
 parser.add_argument('-b', '--git_branch', dest='git_branch', help='Git Branch', default='develop')
 parser.add_argument('-v', '--odoo_version', dest='odoo_version', action='store', help='Odoo Version', default='8.0')
 parser.add_argument('-r', '--tx_num_retries', help='Max Retrieves', dest='tx_num_retries', default=3)
@@ -121,11 +123,11 @@ class TransifexPuller(object):
         tx_password = arguments['tx_password']
         tx_organization = arguments['tx_organization']
         gitlab_token = arguments['gitlab_token']
-        gitlab_email = arguments['gitlab_email']
 
         self.tx_project_shortcut = arguments['tx_project_shortcut']
         self.gitlab_url = arguments['gitlab_url']
         self.gitlab_repo_url = arguments['gitlab_repo_url']
+        self.bare_repo_path = arguments['bare_repo_path']
         self.git_branch = arguments['git_branch']
         self.odoo_version = arguments['odoo_version']
         self.tx_num_retries = arguments['tx_num_retries']
@@ -136,6 +138,7 @@ class TransifexPuller(object):
         self.tx_org = tx_organization
         self.gl_token = gitlab_token
         self.gl_org = self.tx_org
+        self.gl_credentials = Signature('Worldline Runbot', 'runbot@depfac.com')
         
         # Connect to GitLab
         self.gitlab = gitlab3.GitLab(self.gitlab_url, gitlab_token)
@@ -174,6 +177,10 @@ class TransifexPuller(object):
             tx_project = self.tx_api.project(self.transifex_project_slug).get()
         except:
             raise  Exception('Cannot retrieve the project %s' % self.transifex_project_slug)
+
+        print "Init Repo GitLab"
+        git_repo = Repository(self.bare_repo_path)
+        tree = git_repo.TreeBuilder()
 
         print "Processing project '%s'..." % tx_project['name']
         owner, repo = self._get_owner_repository(self.gitlab_repo_url)
@@ -229,13 +236,8 @@ class TransifexPuller(object):
                                 print "...no change in %s" % gl_file_path
                                 continue
                         print '..replacing %s' % gl_file_path
-                        # new_file_blob = gl_repo.create_blob(
-                        #     tx_lang['content'], encoding='utf-8')
-                        # tree_data.append({
-                        #     'path': gl_file_path[1:],
-                        #     'mode': '100644',
-                        #     'type': 'blob',
-                        #     'sha': new_file_blob})
+                        new_file_blob = git_repo.create_blob(tx_lang['content'].encode('utf-8'))
+                        auto_insert(git_repo, tree, gl_file_path, new_file_blob, GIT_FILEMODE_BLOB)
                     except (KeyboardInterrupt, SystemExit):
                         raise
                     except:
@@ -249,17 +251,16 @@ class TransifexPuller(object):
             # http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/\
             # content/Determining_Limits_Programmatically-d1e1039.html
 
-        return
-        if tree_data:
-            tree_sha = gl_branch.commit.commit.tree.sha
-            tree = gl_repo.create_tree(tree_data, tree_sha)
-            message = 'Transbot updated translations from Transifex'
-            print "message", message
-            commit = gl_repo.create_commit(
-                message=message, tree=tree.sha, parents=[gl_branch.commit.sha],
-                author=self.gl_credentials, committer=self.gl_credentials)
-            print "git pushing"
-            gl_repo.ref('heads/{}'.format(gl_branch.name)).update(commit.sha)
+        tree_oid = tree.write()
+        message = 'Transbot updated translations from Transifex'
+        branch = git_repo.lookup_branch(self.git_branch)
+
+        print "message", message
+        commit = git_repo.create_commit(branch.name, self.gl_credentials, self.gl_credentials, message, tree_oid, [branch.target])
+
+        print "git pushing"
+        # TODO To implement
+        #git_repo.ref('heads/{}'.format(gl_branch.name)).update(commit.sha)
         # Wait 5 minutes before the next project to avoid reaching Transifex
         # API limitations
         # TODO: Request the API to get the date for the next request
@@ -268,6 +269,30 @@ class TransifexPuller(object):
         print "Sleeping 5 minutes..."
         time.sleep(300)
 
+
+
+def auto_insert(repo, treebuilder, path, thing, mode):
+    """figure out and deal with the necessary subtree structure"""
+    path_parts = path.split('/', 1)
+    if len(path_parts) == 1:  # base case
+        treebuilder.insert(path, thing, mode)
+        return treebuilder.write()
+
+    subtree_name, sub_path = path_parts
+    tree_oid = treebuilder.write()
+    tree = repo.get(tree_oid)
+    try:
+        entry = tree[subtree_name]
+        assert entry.filemode == GIT_FILEMODE_TREE,\
+            '{} already exists as a blob, not a tree'.format(entry.name)
+        existing_subtree = repo.get(entry.hex)
+        sub_treebuilder = repo.TreeBuilder(existing_subtree)
+    except KeyError:
+        sub_treebuilder = repo.TreeBuilder()
+
+    subtree_oid = auto_insert(repo, sub_treebuilder, sub_path, thing, mode)
+    treebuilder.insert(subtree_name, subtree_oid, GIT_FILEMODE_TREE)
+    return treebuilder.write()
 
 def main():
     tp = TransifexPuller()
