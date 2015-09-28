@@ -17,46 +17,19 @@ For using this utility, you need to install these dependencies:
 Configuration
 =============
 
-You must have a file called oca.cfg on the same folder of the script for
+You can have a file called config.cfg on the same folder of the script for
 storing credentials parameters. You can generate an skeleton config running
 this script for a first time.
 
 Usage
 =====
 
-tx_pull.py [-h] [-p PROJECTS [PROJECTS ...]]
+tx_pull.py TX_LOGIN TX_PASSWORD [-h] [-s|--tx_slug TRANSIFEX_SLUG] [-p|--project_path FOLDER_PATH_OUT]
 
 optional arguments:
   -h, --help            show this help message and exit
-  -p PROJECTS [PROJECTS ...], --projects PROJECTS [PROJECTS ...]
-                        List of slugs of Transifex projects to pull
-
-You have to set correctly the configuration file (oca.cfg), and then you'll
-see the progress in the screen. The script will:
-
-* Scan all accesible projects for the user (or only the passed ones with
-  -p/--projects argument).
-* Check which ones contain 'OCA-' string.
-* Retrieve the available translation strings
-* Reverse the name of the project slug to get GitLab branch
-* Compare with the existing GitLab files
-* If changed, a commit is pushed to GitLab with the updated files
-
-Known issues / Roadmap
-======================
-
-* This script is only valid for OCA projects pushed to Transifex with default
-  naming scheme. This is because there's a reversal operation in the name to
-  get the GitLab repo. It can be easily adapted to get pairs of Transifex slugs
-  with the corresponding GitLab branch.
-* The scan is made downloading each translation file, so it's an slow process.
-  Maybe we can improve this using Transifex statistics (see
-  http://docs.transifex.com/api/statistics/) to check if there is no update
-  in the resource, and comparing with the date of the last commit made by
-  this script (but forces also to check for this commit on GitLab). Another
-  option is to add an argument to provide a date, and check if there is an
-  update for the resource translation beyond that date. As this also needs a
-  call, it has to be tested if we improve or not the speed.
+  -s, --tx_slub         The transifex project slug (look in the project URL)
+  -p, --project_path    The project folder path out
 
 Credits
 =======
@@ -66,71 +39,101 @@ Contributors
 
 * Samuel Lefever
 * Pedro M. Baeza <pedro.baeza@serviciosbaeza.com>
-
-Maintainer
-----------
-
-.. image:: https://odoo-community.org/logo.png
-   :alt: Odoo Community Association
-   :target: https://odoo-community.org
-
-This module is maintained by the OCA.
-
-OCA, or the Odoo Community Association, is a nonprofit organization whose
-mission is to support the collaborative development of Odoo features and
-promote its widespread use.
-
-To contribute to this module, please visit http://odoo-community.org.
+* Sylvain Van Hoof <sylvain.vanhoof@eezee-it.com>
 """
 
 import argparse
-import os
-
 import polib
+import re
 from slumber import API, exceptions
-
+import ConfigParser
+import os
 
 parser = argparse.ArgumentParser(
     description='Pull Transifex updated translations to the file system',
     add_help=True)
-parser.add_argument('tx_login', help='Transifex Login')
-parser.add_argument('tx_password', help='Transifex Password')
-parser.add_argument('tx_slug', help='Transifex Slug')
-parser.add_argument('-p', '--project_path', dest='path_out', help='Project Path', default=os.getcwd())
-parser.add_argument('-r', '--tx_num_retries', help='Max Retrieves', dest='tx_num_retries', default=3)
+parser.add_argument('-s', '--tx_slug', dest='tx_slug', help='Transifex Slug')
+parser.add_argument('-p', '--project_path', dest='path_out', help='Project Path')
 
 TX_URL = "https://www.transifex.com/api/2/"
 
+
 class TransifexPuller(object):
     def __init__(self):
-        result = parser.parse_args()
-        arguments = dict(result._get_kwargs())
+        config = read_config()
+        arguments = parser.parse_args()
 
-        tx_login = arguments['tx_login']
-        tx_password = arguments['tx_password']
-        self.transifex_project_slug = arguments['tx_slug']
-        self.tx_num_retries = arguments['tx_num_retries']
+        print '####################'
+        print '# Transifex Puller #'
+        print '####################'
+        print
 
-        self.path_out = arguments['path_out']
-        self._check_path(self.path_out)
+        print 'Read configuration from config file'
+        tx_login = config.get('Transifex', 'login')
+        if tx_login:
+            print 'Login: ',  tx_login
+        else:
+            while not tx_login:
+                tx_login = raw_input('Transifex Login: ')
+                if not tx_login:
+                    print 'Plase insert a login'
+
+        tx_password = config.get('Transifex', 'password')
+        if tx_password:
+            print 'Password: ' , re.sub('.', '*', tx_password)
+        else:
+            while not tx_password:
+                tx_password = raw_input('Transifex Password: ')
+                if not tx_password:
+                    print 'Please insert a password'
+
+        tx_slug = arguments.tx_slug or config.get('Transifex', 'slug')
+        if tx_slug:
+            print 'Slug: ' , tx_slug
+        else:
+            while not tx_slug:
+                tx_slug = raw_input('Transifex Slug: ')
+                if not tx_slug:
+                    print 'Please insert a password'
+
+        tx_path = arguments.path_out or config.get('Transifex', 'path_out') or os.getcwd()
+        tx_path = os.path.abspath(tx_path)
+        while not self._check_path(tx_path):
+            tx_path = raw_input('Folder path out (should be a git directory): ')
+        print 'Path: ' , tx_path
+
+        self.transifex_project_slug = tx_slug
+        self.tx_num_retries = config.get('Transifex', 'num_retries')
+
+        self.path_out = tx_path
 
         # Connect to Transifex
         self.tx_api = API(TX_URL, auth=(tx_login, tx_password))
 
     def _check_path(self, path):
+        print
+        print 'Check folder ', path
         if not os.path.isdir(path):
-            raise Exception('The folder %s doesn\'t exist' % path)
+            print 'The folder %s doesn\'t exist' % path
+            return False
         if not os.path.isdir(os.path.join(path, '.git')):
-            raise Exception('This folder exists but it is not a git folder (no .git folder found)')
+            print 'This folder exists but it is not a git folder (no .git folder found)'
+            return False
         if not os.access(path, os.W_OK):
-            raise Exception('You cannot write on this folder')
+            print 'You cannot write on this folder'
+            return False
+
+        return True
 
     def pull_translation(self):
         print "Retrieve project %s" % (self.transifex_project_slug)
         try:
             tx_project = self.tx_api.project(self.transifex_project_slug).get()
         except:
-            raise  Exception('Cannot retrieve the project %s' % self.transifex_project_slug)
+            print 'Cannot retrieve the project %s' % self.transifex_project_slug
+            print 'Check your login and password'
+            print 'Otherwise, check the slug'
+            return
 
         print "Processing project '%s'..." % tx_project['name']
         tx_project_api = self.tx_api.project(tx_project['slug'])
@@ -174,6 +177,33 @@ class TransifexPuller(object):
 def main():
     tp = TransifexPuller()
     tp.pull_translation()
+
+
+CREDENTIALS_FILE = 'config.cfg'
+
+
+def init_config():
+    config = ConfigParser.ConfigParser()
+    config.add_section("Transifex")
+    config.set("Transifex", "login", "")
+    config.set("Transifex", "password", "")
+    config.set("Transifex", "slug", "")
+    config.set("Transifex", "path_out", "")
+    config.set("Transifex", "num_retries", 3)
+    write_config(config)
+
+
+def read_config():
+    if not os.path.exists(CREDENTIALS_FILE):
+        init_config()
+    config = ConfigParser.ConfigParser()
+    config.read(CREDENTIALS_FILE)
+    return config
+
+
+def write_config(config):
+    with open(CREDENTIALS_FILE, 'w') as fd:
+        config.write(fd)
 
 
 if __name__ == '__main__':

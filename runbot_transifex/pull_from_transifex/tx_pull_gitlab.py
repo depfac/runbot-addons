@@ -179,14 +179,14 @@ class TransifexPuller(object):
             raise  Exception('Cannot retrieve the project %s' % self.transifex_project_slug)
 
         print "Init Repo GitLab"
-        git_repo = Repository(self.bare_repo_path)
-        tree = git_repo.TreeBuilder()
+        repo = Repository(self.bare_repo_path)
+        root = repo.TreeBuilder()
 
         print "Processing project '%s'..." % tx_project['name']
-        owner, repo = self._get_owner_repository(self.gitlab_repo_url)
+        owner, repo_name = self._get_owner_repository(self.gitlab_repo_url)
         # get a reference to the gitlab repo and branch where to push the
         # the translations
-        project = [project for project in self.gitlab.projects() if '%s/%s.git' % (owner, repo) in project.http_url_to_repo]
+        project = [project for project in self.gitlab.projects() if '%s/%s.git' % (owner, repo_name) in project.http_url_to_repo]
         if not project:
             raise Exception('Project %s not found in the repo gitlab' % tx_project['name'])
         project = project[0]
@@ -236,8 +236,8 @@ class TransifexPuller(object):
                                 print "...no change in %s" % gl_file_path
                                 continue
                         print '..replacing %s' % gl_file_path
-                        new_file_blob = git_repo.create_blob(tx_lang['content'].encode('utf-8'))
-                        auto_insert(git_repo, tree, gl_file_path, new_file_blob, GIT_FILEMODE_BLOB)
+                        new_file_blob = repo.create_blob(tx_lang['content'].encode('utf-8'))
+                        auto_insert(repo, root, gl_file_path, new_file_blob, GIT_FILEMODE_BLOB)
                     except (KeyboardInterrupt, SystemExit):
                         raise
                     except:
@@ -251,16 +251,16 @@ class TransifexPuller(object):
             # http://docs.rackspace.com/loadbalancers/api/v1.0/clb-devguide/\
             # content/Determining_Limits_Programmatically-d1e1039.html
 
-        tree_oid = tree.write()
+        tree_oid = repo.index.write_tree()
         message = 'Transbot updated translations from Transifex'
-        branch = git_repo.lookup_branch(self.git_branch)
+        branch = repo.lookup_branch(self.git_branch)
 
         print "message", message
-        commit = git_repo.create_commit(branch.name, self.gl_credentials, self.gl_credentials, message, tree_oid, [branch.target])
+        commit = repo.create_commit(branch.name, self.gl_credentials, self.gl_credentials, message, tree_oid, [branch.target])
 
         print "git pushing"
         # TODO To implement
-        #git_repo.ref('heads/{}'.format(gl_branch.name)).update(commit.sha)
+        #repo.ref('heads/{}'.format(gl_branch.name)).update(commit.sha)
         # Wait 5 minutes before the next project to avoid reaching Transifex
         # API limitations
         # TODO: Request the API to get the date for the next request
