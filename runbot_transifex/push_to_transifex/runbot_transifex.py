@@ -40,8 +40,6 @@ def main(argv=None):
     addons = addons_str.split(',')
 
     transifex_project_name = "%s (%s)" % (project_name, odoo_version)
-    transifex_project_slug = "%s-%s" % (project_shortcut,
-                                      odoo_version.replace('.', '-'))
     transifex_organization = project_organization
 
     # Create Transifex project if it doesn't exist
@@ -50,9 +48,8 @@ def main(argv=None):
     auth = (transifex_user, transifex_password)
     api_url = "https://www.transifex.com/api/2/"
     api = API(api_url, auth=auth)
-    project_data = {"slug": transifex_project_slug,
+    project_data = {"slug": project_shortcut,
                     "name": transifex_project_name,
-                    "source_language_code": "en",
                     "description": transifex_project_name,
                     "source_language_code": 'en_US',
                     "organization": project_organization,
@@ -60,7 +57,7 @@ def main(argv=None):
                     "fill_up_resources": transifex_fill_up_resources,
                     }
     try:
-        api.project(transifex_project_slug).get()
+        api.project(project_shortcut).get()
         print 'This Transifex project already exists.'
     except exceptions.HttpClientError:
         try:
@@ -69,7 +66,7 @@ def main(argv=None):
         except exceptions.HttpClientError:
             print 'Transifex organization: %s' % transifex_organization
             print 'Transifex username: %s' % transifex_user
-            print 'Transifex project slug: %s' % transifex_project_slug
+            print 'Transifex project slug: %s' % project_shortcut
             print 'Error: Authentication failed. Please verify that '\
                       'Transifex organization, user and password are '\
                       'correct. You can change these variables in your '\
@@ -94,7 +91,7 @@ def main(argv=None):
         for module in addons:
             print
             print "Downloading PO file for %s" % module
-            source_filename = os.path.join(server_path, module, 'i18n',
+            source_filename = os.path.join(addons_path, module, 'i18n',
                                            module + ".pot")
             # Create i18n/ directory if doesn't exist
             if not os.path.exists(os.path.dirname(source_filename)):
@@ -106,7 +103,7 @@ def main(argv=None):
             print "Linking PO file and Transifex resource"
             set_args = ['-t', 'PO',
                         '--auto-local',
-                        '-r', '%s.%s' % (transifex_project_slug, module),
+                        '-r', '%s.%s' % (project_shortcut, module),
                         '%s/i18n/<lang>.po' % module,
                         '--source-lang', 'en',
                         '--source-file', source_filename,
