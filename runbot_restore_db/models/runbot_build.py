@@ -42,10 +42,13 @@ class RunbotBuild(models.Model):
         if not build.repo_id.db_name:
             return 0
         old_password = build._set_admin_password()
-        to_test = build.repo_id.modules if build.repo_id.modules else 'all'
+        to_test = build.modules and build.modules or 'all'
         cmd, mods = build.cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
                 '--test-enable']
+
+        _logger.info("""Spawn : %s""" % ' '.join(cmd))
+
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     @api.model
