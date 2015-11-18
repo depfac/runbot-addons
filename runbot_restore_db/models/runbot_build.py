@@ -38,6 +38,18 @@ class RunbotBuild(models.Model):
         return self.spawn(cmd, lock_path, log_path, cpu_limit=None, shell=True)
 
     @api.model
+    def job_23_upgrade_all(self, build, lock_path, log_path):
+        if not build.repo_id.db_name:
+            return 0
+        cmd, mods = build.cmd()
+        cmd += ['-d', '%s-all' % build.dest, '-u all', '--stop-after-init',
+                '--max-cron-threads=0']
+
+        _logger.info("""Spawn : %s""" % ' '.join(cmd))
+
+        return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
+
+    @api.model
     def job_25_upgrade(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
@@ -45,7 +57,7 @@ class RunbotBuild(models.Model):
         to_test = build.modules and build.modules or 'all'
         cmd, mods = build.cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
-                '--test-enable']
+                '--test-enable', '--max-cron-threads=0']
 
         _logger.info("""Spawn : %s""" % ' '.join(cmd))
 
