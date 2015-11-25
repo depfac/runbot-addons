@@ -78,6 +78,7 @@ class Odoo8Context(_OdooBaseContext):
         )
         config['db_user'] = 'odoo'
         config['db_password'] = 'odoo'
+        config['dbfilter'] = '^%s$' % (self.dbname)
         registry = RegistryManager.new(self.dbname)
         self.environment_manage = api.Environment.manage()
         self.environment_manage.__enter__()

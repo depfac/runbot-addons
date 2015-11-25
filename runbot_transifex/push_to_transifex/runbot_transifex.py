@@ -71,7 +71,7 @@ def main(argv=None):
                       '.travis.yml file.'
             raise
 
-    print "\nModules to translate: %s" % addons_path
+    print "\nModules to translate: %s" % addons
 
     # Initialize Transifex project
     print 'Initializing Transifex project'
