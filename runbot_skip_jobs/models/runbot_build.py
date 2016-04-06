@@ -22,7 +22,7 @@
 import os
 import time
 import openerp
-from openerp import models, api
+from openerp import models, api, fields
 from openerp.addons.runbot import runbot
 
 
@@ -118,7 +118,7 @@ class RunbotBuild(models.Model):
                     'port': port,
                     'state': 'testing',
                     'job': jobs[0],
-                    'job_start': runbot.now(),
+                    'job_start': fields.Datetime.now(),
                     'job_end': False,
                 }
                 build.write(values)
@@ -132,8 +132,8 @@ class RunbotBuild(models.Model):
                               build.branch_id.job_timeout
                               or default_timeout) * 60
                     if build.job != jobs[-1] and build.job_time > timeout:
-                        build.logger('%s time exceded (%ss)', build.job,
-                                     build.job_time)
+                        build.logger('%s time exceded (%ss)', build.job, build.job_time)
+                        build.write({'job_end': fields.Datetime.now()})
                         build.kill(result='killed')
                     continue
                 build.logger('%s finished', build.job)
@@ -143,7 +143,7 @@ class RunbotBuild(models.Model):
                 if build.job == jobs[-2]:
                     v['state'] = 'running'
                     v['job'] = jobs[-1]
-                    v['job_end'] = runbot.now(),
+                    v['job_end'] = fields.Datetime.now(),
                 # running -> done
                 elif build.job == jobs[-1]:
                     v['state'] = 'done'
@@ -164,8 +164,7 @@ class RunbotBuild(models.Model):
                 log_path = build.path('logs', '%s.txt' % build.job)
                 pid = job_method(build, lock_path, log_path)
                 build.write({'pid': pid})
-            # needed to prevent losing pids if multiple jobs are started
-            # and one them raise an exception
+            # needed to prevent losing pids if multiple jobs are started and one them raise an exception
             self.env.cr.commit()
 
             if pid == -2:
@@ -175,4 +174,4 @@ class RunbotBuild(models.Model):
 
             # cleanup only needed if it was not killed
             if build.state == 'done':
-                build.cleanup()
+                build._local_cleanup()
