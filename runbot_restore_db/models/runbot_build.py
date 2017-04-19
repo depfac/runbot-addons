@@ -115,4 +115,22 @@ WHERE id = 1" % password)
             # Close and restore the new cursor
             build_cr.close()
 
+    @api.model
+    def job_27_set_base_url(self, build, lock_path, log_path):
+        if not build.repo_id.db_name:
+            return 0
 
+        build_url = ('https://%s.%s') % (build.dest, self.env['ir.config_parameter'].get_param('runbot.domain'))
+        query = ("UPDATE ir_config_parameter SET value = '%s' WHERE key LIKE 'web.base.url'") % build_url
+
+        db = openerp.sql_db.db_connect('%s-all' % build.dest)
+        build_cr = db.cursor()
+        try:
+            build_cr.execute(query)
+            build_cr.commit()
+        except:
+            _logger.error("Error during the execution of the query '%s' "
+                          "on the DB '%s'" % (query, '%s-all' % build.dest))
+        finally:
+            # Close and restore the new cursor
+            build_cr.close()
