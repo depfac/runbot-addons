@@ -29,6 +29,7 @@ import unicodedata
 import requests
 try:
     from gitlab3 import GitLab
+    from gitlab3.exceptions import ResourceNotFound
 except ImportError as exc:
     # don't fail at load if gitlab module is not available
     pass
@@ -215,9 +216,13 @@ class RunbotRepo(models.Model):
                 find_all=True,
                 cached=merge_requests,
                 state='opened'):
-            source_project = get_gitlab_project(
-                self.base, self.token, mr.source_project_id
-            )
+            try:
+                source_project = get_gitlab_project(
+                    self.base, self.token, mr.source_project_id
+                )
+            except ResourceNotFound:
+                # Origin project no longer exists, ignore
+                continue
             source_branch = source_project.branch(mr.source_branch)
             commit = source_branch.commit
             sha = commit['id']
