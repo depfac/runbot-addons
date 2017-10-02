@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+<data>
+
+    <record id="view_queries_tree" model="ir.ui.view">
+        <field name="model">runbot.sql.query</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="database"/>
+                <field name="state"/>
+                <field name="when_applied"/>
+                <field name="who_applied"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_queries_form" model="ir.ui.view">
+        <field name="model">runbot.sql.query</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,failed,applied"/>
+                </header>
+                <group>
+                    <field name="database"/>
+                </group>
+                <group>
+                    <label for="query"/>
+                    <newline/>
+                    <field name="query" nolabel="1"/>
+                    <newline/>
+                    <label for="pg_result"/>
+                    <newline/>
+                    <field name="pg_result" nolabel="1" style="font-family: monospace;"/>
+                    <newline/>
+                </group>
+                <group attrs="{'invisible': [('state', '=', 'applied')]}">
+                    <div>
+                        <button type="object" name="test" string="Test"/>
+                        <field name="test_state" class="oe_inline" attrs="{'invisible': [('test_state', '=', 'untested')]}"/>
+                        <button type="object" name="apply" string="Apply"/>
+                    </div>
+                </group>
+            </form>
+        </field>
+    </record>
+
+
+        <record id="sql_editor_action" model="ir.actions.act_window">
+            <field name="name">SQL Editor</field>
+            <field name="res_model">runbot.sql.query</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem action="sql_editor_action" id="menu_sql_editor" parent="runbot.menu_runbot"/>
+
+</data>
+</openerp>
