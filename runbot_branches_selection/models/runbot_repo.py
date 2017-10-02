@@ -2,8 +2,8 @@
 ##############################################################################
 #
 #    Odoo, Open Source Management Solution
-#    This module copyright (C) 2010 Savoir-faire Linux
-#    (<http://www.savoirfairelinux.com>).
+#    Copyright (C) 2017 dFakto
+#    http://www.dfakto.com
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as

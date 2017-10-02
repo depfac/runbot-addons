@@ -1,9 +1,9 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
-#    Author: Sylvain Van Hoof
 #    Odoo, Open Source Management Solution
-#    Copyright (C) 2010-2015 Eezee-It (<http://www.eezee-it.com>).
+#    Copyright (C) 2017 dFakto
+#    http://www.dfakto.com
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU Affero General Public License as
