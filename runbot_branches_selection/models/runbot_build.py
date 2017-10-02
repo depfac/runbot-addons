@@ -39,6 +39,6 @@ class RunbotBuild(models.Model):
         repo = branch.repo_id
         if repo.branch_filters:
             patterns = repo.branch_filters.split(';')
-            if not any(re.match('^%s$' % pattern, branch.name.split('/')[-1]) for pattern in patterns):
+            if not any(re.match('^%s' % pattern, branch.name.split('/')[-1]) for pattern in patterns):
                 return False
         return True
