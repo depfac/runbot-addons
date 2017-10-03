@@ -24,6 +24,9 @@ from openerp import models, fields
 
 class RunbotRepo(models.Model):
     _inherit = "runbot.repo"
+    _rec_name = 'label'
 
     branch_filters = fields.Char(name='Branches to build',
                                  help='Regular expressions of names of branches to build, separated by semi-colons')
+    label = fields.Char(string='Repo name')
+    name = fields.Char(string='URL')

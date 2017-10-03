@@ -6,6 +6,15 @@
         <field name="model">runbot.repo</field>
         <field name="inherit_id" ref="runbot.view_repo_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//label[@for='name']" position="before">
+                <label for="label"/>
+                <h1>
+                    <field name="label" class="oe_inline" required="1"/>
+                </h1>
+            </xpath>
+            <xpath expr="//label[@for='name']" position="attributes">
+                <attribute name="class"></attribute>
+            </xpath>
             <xpath expr="//sheet" position="inside">
                 <group string="Branches filters">
                     <field name="branch_filters" />
@@ -13,6 +22,35 @@
             </xpath>
         </field>
     </record>
+
+    <record id="view_repo_tree" model="ir.ui.view">
+        <field name="model">runbot.repo</field>
+        <field name="inherit_id" ref="runbot.view_repo_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="before">
+                <field name="label"/>
+            </xpath>
+        </field>
+    </record>
+
+    <template id="repo_label" name="Repo - Label" inherit_id="runbot.repo">
+        <xpath expr="//b/t[@t-esc='repo.base']" position="attributes">
+            <attribute name="t-esc">repo.label</attribute>
+        </xpath>
+        <xpath expr="//a/t[@t-esc='re.base']" position="attributes">
+            <attribute name="t-esc">re.label</attribute>
+        </xpath>
+        <xpath expr="//td/t[@t-esc='repo.base']" position="attributes">
+            <attribute name="t-esc">repo.label</attribute>
+        </xpath>
+    </template>
+
+    <template id="build_label" name="Build - Label" inherit_id="runbot.build">
+        <xpath expr="//a[@class='navbar-brand']/b/t[@t-esc='repo.base']" position="attributes">
+            <attribute name="t-esc">repo.label</attribute>
+        </xpath>
+    </template>
+
 
 </data>
 </openerp>
