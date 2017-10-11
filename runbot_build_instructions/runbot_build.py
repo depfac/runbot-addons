@@ -61,7 +61,7 @@ class runbot_build(orm.Model):
         'prebuilt': fields.boolean("Prebuilt"),
     }
 
-    def job_00_init(self, cr, uid, build, lock_path, log_path):
+    def _job_00_init(self, cr, uid, build, lock_path, log_path):
         res = super(runbot_build, self).job_00_init(
             cr, uid, build, lock_path, log_path
         )
@@ -70,7 +70,7 @@ class runbot_build(orm.Model):
         build.prebuilt = True
         return res
 
-    def job_10_test_base(self, cr, uid, build, lock_path, log_path):
+    def _job_10_test_base(self, cr, uid, build, lock_path, log_path):
         if build.branch_id.repo_id.skip_test_jobs:
             _logger.info('skipping job_10_test_base')
             return MAGIC_PID_RUN_NEXT_JOB
@@ -79,7 +79,7 @@ class runbot_build(orm.Model):
                 cr, uid, build, lock_path, log_path
             )
 
-    def job_20_test_all(self, cr, uid, build, lock_path, log_path):
+    def _job_20_test_all(self, cr, uid, build, lock_path, log_path):
         if build.branch_id.repo_id.skip_test_jobs:
             _logger.info('skipping job_20_test_all')
             with open(log_path, 'w') as f:
@@ -125,7 +125,7 @@ class runbot_build(orm.Model):
             os.chdir(pushd)
 
     @custom_build
-    def checkout(self, cr, uid, ids, context=None):
+    def _checkout(self, cr, uid, ids, context=None):
         """Checkout in custom build directories if they are specified
         Do same as superclass except for git_export path.
         """

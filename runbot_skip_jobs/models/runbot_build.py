@@ -30,7 +30,7 @@ class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
     @api.model
-    def job_30_run(self, build, lock_path, log_path):
+    def _job_30_run(self, build, lock_path, log_path):
         """
         Redefine this job to avoid ERROR on empty logs like db restore
         :param build:
@@ -50,14 +50,14 @@ class RunbotBuild(models.Model):
         result = "ok"
         log_names = [elmt.name for elmt in build.repo_id.parse_job_ids]
         for log_name in log_names:
-            log_all = build.path('logs', log_name + '.txt')
+            log_all = build._path('logs', log_name + '.txt')
             if runbot.grep(log_all, ".modules.loading: Modules loaded."):
                 if runbot.rfind(log_all, runbot._re_error):
                     result = "ko"
                     break;
                 elif runbot.rfind(log_all, runbot._re_warning):
                     result = "warn"
-                elif not runbot.grep(build.server("test/common.py"),
+                elif not runbot.grep(build._server("test/common.py"),
                               "post_install") or runbot.grep(log_all,
                                                       "Initiating shutdown."):
                     if result != "warn":
@@ -75,8 +75,8 @@ class RunbotBuild(models.Model):
 
         # run server
         build._log('run', 'Start running build %s' % build.dest)
-        cmd, mods = build.cmd()
-        if os.path.exists(build.server('addons/im_livechat')):
+        cmd, mods = build._cmd()
+        if os.path.exists(build._server('addons/im_livechat')):
             cmd += ["--workers", "2"]
             cmd += ["--longpolling-port", "%d" % (build.port + 1)]
             cmd += ["--max-cron-threads", "1"]
@@ -86,21 +86,21 @@ class RunbotBuild(models.Model):
 
         cmd += ['-d', "%s-all" % build.dest]
 
-        if runbot.grep(build.server("tools/config.py"), "db-filter"):
+        if runbot.grep(build._server("tools/config.py"), "db-filter"):
             if build.repo_id.nginx:
                 cmd += ['--db-filter', '%d.*$']
             else:
                 cmd += ['--db-filter', '%s.*$' % build.dest]
 
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
+        return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     @api.multi
-    def schedule(self):
+    def _schedule(self):
         """
         /!\ must rewrite the all method because for each build we need
             to remove jobs that were specified as skipped in the repo.
         """
-        all_jobs = self.list_jobs()
+        all_jobs = self._list_jobs()
         icp = self.env['ir.config_parameter']
         default_timeout = int(
             icp.get_param('runbot.timeout', default=1800)) / 60
@@ -112,7 +112,7 @@ class RunbotBuild(models.Model):
                 jobs.remove(job_to_skip.name)
             if build.state == 'pending':
                 # allocate port and schedule first job
-                port = self.find_port()
+                port = self._find_port()
                 values = {
                     'host': runbot.fqdn(),
                     'port': port,
@@ -125,18 +125,18 @@ class RunbotBuild(models.Model):
                 self.env.cr.commit()
             else:
                 # check if current job is finished
-                lock_path = build.path('logs', '%s.lock' % build.job)
+                lock_path = build._path('logs', '%s.lock' % build.job)
                 if runbot.locked(lock_path):
                     # kill if overpassed
                     timeout = (
                               build.branch_id.job_timeout
                               or default_timeout) * 60
                     if build.job != jobs[-1] and build.job_time > timeout:
-                        build.logger('%s time exceded (%ss)', build.job, build.job_time)
+                        build._logger('%s time exceded (%ss)', build.job, build.job_time)
                         build.write({'job_end': fields.Datetime.now()})
-                        build.kill(result='killed')
+                        build._kill(result='killed')
                     continue
-                build.logger('%s finished', build.job)
+                build._logger('%s finished', build.job)
                 # schedule
                 v = {}
                 # testing -> running
@@ -157,11 +157,11 @@ class RunbotBuild(models.Model):
             # run job
             pid = None
             if build.state != 'done':
-                build.logger('running %s', build.job)
-                job_method = getattr(self, build.job)
-                runbot.mkdirs([build.path('logs')])
-                lock_path = build.path('logs', '%s.lock' % build.job)
-                log_path = build.path('logs', '%s.txt' % build.job)
+                build._logger('running %s', build.job)
+                job_method = getattr(self, '_' + build.job)
+                runbot.mkdirs([build._path('logs')])
+                lock_path = build._path('logs', '%s.lock' % build.job)
+                log_path = build._path('logs', '%s.txt' % build.job)
                 pid = job_method(build, lock_path, log_path)
                 build.write({'pid': pid})
             # needed to prevent losing pids if multiple jobs are started and one them raise an exception
@@ -170,7 +170,7 @@ class RunbotBuild(models.Model):
             if pid == -2:
                 # no process to wait, directly call next job
                 # FIXME find a better way that this recursive call
-                build.schedule()
+                build._schedule()
 
             # cleanup only needed if it was not killed
             if build.state == 'done':

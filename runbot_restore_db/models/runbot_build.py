@@ -31,40 +31,40 @@ class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
     @api.model
-    def job_16_restore(self, build, lock_path, log_path):
+    def _job_16_restore(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
         cmd = "createdb -T %s %s-all" % (build.repo_id.db_name, build.dest)
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None, shell=True)
+        return self._spawn(cmd, lock_path, log_path, cpu_limit=None, shell=True)
 
     @api.model
-    def job_23_upgrade_all(self, build, lock_path, log_path):
+    def _job_23_upgrade_all(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
-        cmd, mods = build.cmd()
+        cmd, mods = build._cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u all', '--stop-after-init',
                 '--max-cron-threads=0']
 
         _logger.info("""Spawn : %s""" % ' '.join(cmd))
 
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
+        return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     @api.model
-    def job_25_upgrade(self, build, lock_path, log_path):
+    def _job_25_upgrade(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
         old_password = build._set_admin_password()
         to_test = build.modules and build.modules or 'all'
-        cmd, mods = build.cmd()
+        cmd, mods = build._cmd()
         cmd += ['-d', '%s-all' % build.dest, '-u', to_test, '--stop-after-init',
                 '--test-enable', '--max-cron-threads=0']
 
         _logger.info("""Spawn : %s""" % ' '.join(cmd))
 
-        return self.spawn(cmd, lock_path, log_path, cpu_limit=None)
+        return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     @api.model
-    def job_26_reset_password(self, build, lock_path, log_path):
+    def _job_26_reset_password(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
         build._set_admin_password('')
@@ -92,7 +92,7 @@ WHERE id = 1" % password)
         build_cr.close()
         return old_password
 
-    def job_24_set_demo_flag(self, build, lock_path, log_path):
+    def _job_24_set_demo_flag(self, build, lock_path, log_path):
         modules_to_test = build.modules
 
         # Odoo doesn't start test if the module has no demo data
@@ -116,7 +116,7 @@ WHERE id = 1" % password)
             build_cr.close()
 
     @api.model
-    def job_27_set_base_url(self, build, lock_path, log_path):
+    def _job_27_set_base_url(self, build, lock_path, log_path):
         if not build.repo_id.db_name:
             return 0
 
