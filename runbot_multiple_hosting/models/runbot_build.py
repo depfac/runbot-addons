@@ -35,6 +35,11 @@ class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
     @api.multi
+    def _server(self, *l, **kw):
+        for build in self:
+            return build._path(build.repo_id.server_dir, *l)
+
+    @api.multi
     def _checkout(self):
         result = super(RunbotBuild, self)._checkout()
         for build in self:

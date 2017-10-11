@@ -7,6 +7,10 @@
             <field name="inherit_id" ref="runbot.view_repo_form"/>
             <field name="arch" type="xml">
 
+                <field name="dependency_ids" position="before">
+                    <field name="server_dir"/>
+                </field>
+
                 <field name="dependency_ids" position="after">
                     <field name="dependency_nested_ids">
                         <tree editable="True">

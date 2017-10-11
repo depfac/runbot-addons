@@ -47,6 +47,7 @@ class RunbotRepo(models.Model):
     dependency_nested_ids = fields.One2many('runbot.repo.dep', 'repo_src_id',
                                             string='Nested Dependency')
     base = fields.Char('Base URL', compute="_get_base", readonly=True)
+    server_dir = fields.Char('Server Directory')
 
     @api.multi
     def _get_base(self):
