@@ -36,7 +36,7 @@ class RunbotBuild(models.Model):
     _inherit = 'runbot.build'
 
     @api.model
-    def job_29_push_translation_to_transifex(self, build, lock_path, log_path):
+    def _job_29_push_translation_to_transifex(self, build, lock_path, log_path):
         repo = build.repo_id
         branch = build.branch_id
 

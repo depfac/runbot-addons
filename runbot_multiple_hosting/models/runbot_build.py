@@ -35,28 +35,34 @@ class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
     @api.multi
-    def checkout(self):
-        result = super(RunbotBuild, self).checkout()
+    def _server(self, *l, **kw):
+        for build in self:
+            return build._path(build.repo_id.server_dir, *l)
+
+    @api.multi
+    def _checkout(self):
+        result = super(RunbotBuild, self)._checkout()
         for build in self:
             for extra_repo in build.repo_id.dependency_nested_ids:
-                extra_repo.repo_dst_id.git_export(
-                    extra_repo.reference, build.path())
+                extra_repo.repo_dst_id._git_export(
+                    extra_repo.reference, build._path())
 
             modules_to_move = [
                 os.path.dirname(module)
-                for module in glob.glob(build.path('*/__openerp__.py'))
+                for module in (glob.glob(build._path('*/__openerp__.py')) +
+                               glob.glob(build._path('*/__manifest__.py')))
             ]
 
             for module in runbot.uniq_list(modules_to_move):
                 basename = os.path.basename(module)
-                if os.path.exists(build.server('addons', basename)):
+                if os.path.exists(build._server('addons', basename)):
                     build._log(
                         'Building environment',
                         'You have duplicate modules in your branches "%s"' %
                         basename
                     )
-                    shutil.rmtree(build.server('addons', basename))
-                shutil.move(module, build.server('addons'))
+                    shutil.rmtree(build._server('addons', basename))
+                shutil.move(module, build._server('addons'))
 
         return result
 

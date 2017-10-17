@@ -126,7 +126,7 @@ class RunbotBuild(models.Model):
             modules_to_check_pylint = list(depends & modules_to_check_pylint)
         return modules_to_check_pylint
 
-    def job_15_pylint(self, cr, uid, build, lock_path, log_path, args=None):
+    def _job_15_pylint(self, cr, uid, build, lock_path, log_path, args=None):
         """
         This method is used to run pylint test, getting parameters of the
         pylint configuration, the parameters errors and files to ignore has
@@ -191,7 +191,7 @@ class RunbotBuild(models.Model):
         return build.spawn([fname_pylint_run_sh],
                            lock_path, log_path, cpu_limit=2100)
 
-    def job_30_run(self, cr, uid, build, lock_path, log_path):
+    def _job_30_run(self, cr, uid, build, lock_path, log_path):
         """
         Inherit method to make logs from pylint errors
         """

@@ -167,7 +167,7 @@ class RunbotRepo(models.Model):
             set_gitlab_ci_conf(
                 vals.get('token'),
                 vals.get('name'),
-                self.domain(),
+                self._domain(),
                 repo_id.id,
             )
         return repo_id
@@ -180,7 +180,7 @@ class RunbotRepo(models.Model):
                 set_gitlab_ci_conf(
                     vals.get('token', self.token),
                     vals.get('name', self.name),
-                    self.domain(),
+                    self._domain(),
                     self.id,
                 )
         return result
@@ -203,7 +203,7 @@ class RunbotRepo(models.Model):
 
     @api.one
     @gitlab_api
-    def update(self):
+    def _update(self):
         project = get_gitlab_project(self.base, self.token)
 
         branch_obj = self.env['runbot.branch']
@@ -295,7 +295,7 @@ class RunbotRepo(models.Model):
         for mr in closed_mrs:
             mr.unlink()
 
-        super(RunbotRepo, self).update()
+        super(RunbotRepo, self)._update()
 
         # Avoid TransactionRollbackError due to serialization issues
         self._cr.commit()

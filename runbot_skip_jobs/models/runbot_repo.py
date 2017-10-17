@@ -34,7 +34,7 @@ class RunbotRepo(models.Model):
     @api.model
     def cron_update_job(self):
         build_obj = self.env['runbot.build']
-        jobs = build_obj.list_jobs()
+        jobs = build_obj._list_jobs()
         job_obj = self.env['runbot.job']
         for job_name in jobs:
             job = job_obj.search([('name', '=', job_name)])
