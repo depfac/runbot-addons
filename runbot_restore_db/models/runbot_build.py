@@ -121,7 +121,7 @@ WHERE id = 1" % password)
             return 0
 
         build_url = ('https://%s.%s') % (build.dest, self.env['ir.config_parameter'].get_param('runbot.domain'))
-        query = ("UPDATE ir_config_parameter SET value = '%s' WHERE key LIKE 'web.base.url'") % build_url
+        query = ("UPDATE ir_config_parameter SET value = '%s' WHERE key LIKE 'web.base.url' OR key LIKE 'report.url'") % build_url
 
         db = openerp.sql_db.db_connect('%s-all' % build.dest)
         build_cr = db.cursor()
