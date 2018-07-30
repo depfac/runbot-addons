@@ -19,16 +19,17 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp import http
+from odoo import http
 
-from openerp.http import request
+from odoo.http import request
 
-from openerp.addons.runbot.runbot import RunbotController, uniq_list, flatten
-from openerp.addons.website.models.website import slug
-from openerp.addons.website_sale.controllers.main import QueryURL
+from odoo.addons.runbot.common import uniq_list, flatten
+from odoo.addons.runbot.controllers.frontend import Runbot
+from odoo.addons.http_routing.models.ir_http import slug
+from odoo.addons.website_sale.controllers.main import QueryURL
 
 
-class InheritRunbotController(RunbotController):
+class InheritRunbotController(Runbot):
 
     @http.route()
     def repo(self, repo=None, search='', limit='100', refresh='', **post):

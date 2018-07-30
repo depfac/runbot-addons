@@ -20,9 +20,9 @@
 #
 ##############################################################################
 
-import openerp
-from openerp import models, fields, api
-from openerp.exceptions import Warning
+from odoo import models, fields, api
+from odoo.sql_db import db_connect
+from odoo.exceptions import Warning
 
 class RunbotRepo(models.Model):
     _inherit = "runbot.repo"
@@ -31,12 +31,12 @@ class RunbotRepo(models.Model):
 
     @api.onchange('db_name')
     @api.constrains('db_name')
-    @api.one
     def onchange_db_name(self):
+        self.ensure_one()
         if not self.db_name:
             return
         try:
-            db = openerp.sql_db.db_connect(self.db_name)
+            db = db_connect(self.db_name)
             db_cursor = db.cursor()
         except:
             raise Warning('The database "%s" doesn\'t exist' % self.db_name)

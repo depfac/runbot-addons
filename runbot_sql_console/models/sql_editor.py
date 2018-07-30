@@ -19,9 +19,9 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp import models, api, fields, _
-from openerp.exceptions import Warning
-import openerp
+from odoo import models, api, fields, _
+from odoo.exceptions import Warning
+import odoo
 
 from psycopg2 import ProgrammingError
 from ..tabulate import tabulate

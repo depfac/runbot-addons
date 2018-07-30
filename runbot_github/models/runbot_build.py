@@ -20,7 +20,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp import models, api
+from odoo import models, api
 import logging
 
 _logger = logging.getLogger(__name__)

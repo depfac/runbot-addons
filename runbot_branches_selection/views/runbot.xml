@@ -2,18 +2,15 @@
 <openerp>
 <data>
 
-    <record id="view_repo_form" model="ir.ui.view">
+    <record id="repo_form" model="ir.ui.view">
         <field name="model">runbot.repo</field>
-        <field name="inherit_id" ref="runbot.view_repo_form"/>
+        <field name="inherit_id" ref="runbot.repo_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//label[@for='name']" position="before">
+            <xpath expr="//field[@name='name']" position="before">
                 <label for="label"/>
                 <h1>
                     <field name="label" class="oe_inline" required="1"/>
                 </h1>
-            </xpath>
-            <xpath expr="//label[@for='name']" position="attributes">
-                <attribute name="class"></attribute>
             </xpath>
             <xpath expr="//sheet" position="inside">
                 <group string="Branches filters">
@@ -23,9 +20,9 @@
         </field>
     </record>
 
-    <record id="view_repo_tree" model="ir.ui.view">
+    <record id="repo_view_tree" model="ir.ui.view">
         <field name="model">runbot.repo</field>
-        <field name="inherit_id" ref="runbot.view_repo_tree"/>
+        <field name="inherit_id" ref="runbot.repo_view_tree"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="before">
                 <field name="label"/>

@@ -20,7 +20,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 ##############################################################################
-from openerp.addons.runbot_multiple_hosting.models import hosting
+from odoo.addons.runbot_multiple_hosting.models import hosting
 
 
 class GithubHosting(hosting.Hosting):

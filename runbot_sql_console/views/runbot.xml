@@ -53,7 +53,7 @@
             <field name="view_mode">tree,form</field>
         </record>
 
-        <menuitem action="sql_editor_action" id="menu_sql_editor" parent="runbot.menu_runbot"/>
+        <menuitem action="sql_editor_action" id="menu_sql_editor" parent="runbot.runbot_menu_root"/>
 
 </data>
 </openerp>

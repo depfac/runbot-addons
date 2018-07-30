@@ -21,9 +21,8 @@
 ##############################################################################
 import os
 import time
-import openerp
-from openerp import models, api, fields
-from openerp.addons.runbot import runbot
+from odoo import models, api, fields
+from odoo.addons.runbot.common import locked
 
 
 class RunbotBuild(models.Model):
@@ -94,46 +93,42 @@ class RunbotBuild(models.Model):
 
         return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
 
-    @api.multi
     def _schedule(self):
-        """
-        /!\ must rewrite the all method because for each build we need
-            to remove jobs that were specified as skipped in the repo.
-        """
+        """schedule the build"""
         all_jobs = self._list_jobs()
+
         icp = self.env['ir.config_parameter']
-        default_timeout = int(
-            icp.get_param('runbot.timeout', default=1800)) / 60
+        # For retro-compatibility, keep this parameter in seconds
+        default_timeout = int(icp.get_param('runbot.runbot_timeout', default=1800)) / 60
 
         for build in self:
-            # remove skipped jobs
             jobs = all_jobs[:]
             for job_to_skip in build.repo_id.skip_job_ids:
                 jobs.remove(job_to_skip.name)
-            if build.state == 'pending':
+            if build.state == 'deathrow':
+                build._kill(result='manually_killed')
+                continue
+            elif build.state == 'pending':
                 # allocate port and schedule first job
                 port = self._find_port()
                 values = {
-                    'host': runbot.fqdn(),
+                    'host': fqdn(),
                     'port': port,
                     'state': 'testing',
                     'job': jobs[0],
-                    'job_start': fields.Datetime.now(),
+                    'job_start': now(),
                     'job_end': False,
                 }
                 build.write(values)
-                self.env.cr.commit()
             else:
                 # check if current job is finished
                 lock_path = build._path('logs', '%s.lock' % build.job)
-                if runbot.locked(lock_path):
+                if locked(lock_path):
                     # kill if overpassed
-                    timeout = (
-                              build.branch_id.job_timeout
-                              or default_timeout) * 60
+                    timeout = (build.branch_id.job_timeout or default_timeout) * 60 * ( build.coverage and 1.5 or 1)
                     if build.job != jobs[-1] and build.job_time > timeout:
                         build._logger('%s time exceded (%ss)', build.job, build.job_time)
-                        build.write({'job_end': fields.Datetime.now()})
+                        build.write({'job_end': now()})
                         build._kill(result='killed')
                     continue
                 build._logger('%s finished', build.job)
@@ -143,7 +138,7 @@ class RunbotBuild(models.Model):
                 if build.job == jobs[-2]:
                     v['state'] = 'running'
                     v['job'] = jobs[-1]
-                    v['job_end'] = fields.Datetime.now(),
+                    v['job_end'] = now(),
                 # running -> done
                 elif build.job == jobs[-1]:
                     v['state'] = 'done'
@@ -152,18 +147,23 @@ class RunbotBuild(models.Model):
                 else:
                     v['job'] = jobs[jobs.index(build.job) + 1]
                 build.write(v)
-            build.refresh()
 
             # run job
             pid = None
             if build.state != 'done':
                 build._logger('running %s', build.job)
-                job_method = getattr(self, '_' + build.job)
-                runbot.mkdirs([build._path('logs')])
+                job_method = getattr(self, '_' + build.job)  # compute the job method to run
+                os.makedirs(build._path('logs'), exist_ok=True)
                 lock_path = build._path('logs', '%s.lock' % build.job)
                 log_path = build._path('logs', '%s.txt' % build.job)
-                pid = job_method(build, lock_path, log_path)
-                build.write({'pid': pid})
+                try:
+                    pid = job_method(build, lock_path, log_path)
+                    build.write({'pid': pid})
+                except Exception:
+                    _logger.exception('%s failed running method %s', build.dest, build.job)
+                    build._log(build.job, "failed running job method, see runbot log")
+                    build._kill(result='ko')
+                    continue
             # needed to prevent losing pids if multiple jobs are started and one them raise an exception
             self.env.cr.commit()
 

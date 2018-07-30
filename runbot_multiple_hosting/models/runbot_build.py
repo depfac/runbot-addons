@@ -23,8 +23,8 @@
 import os
 import glob
 import shutil
-from openerp import models, api
-from openerp.addons.runbot import runbot
+from odoo import models, api
+from odoo.addons.runbot import common
 
 import logging
 
@@ -53,7 +53,7 @@ class RunbotBuild(models.Model):
                                glob.glob(build._path('*/__manifest__.py')))
             ]
 
-            for module in runbot.uniq_list(modules_to_move):
+            for module in common.uniq_list(modules_to_move):
                 basename = os.path.basename(module)
                 if os.path.exists(build._server('addons', basename)):
                     build._log(

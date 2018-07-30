@@ -22,7 +22,7 @@
 ##############################################################################
 import re
 import logging
-from openerp import api, fields, models
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -57,18 +57,6 @@ class RunbotRepo(models.Model):
             name = re.sub(r'https?:?\/\/', '', name)
             name = name.replace(':', '/')
             repo.base = name
-
-    @api.onchange('name')
-    def onchange_repository(self):
-        if self.hosting or not self.name:
-            return
-
-        hosting_selection = self._columns['hosting'].selection
-        hosting_list = [hosting[0] for hosting in hosting_selection]
-        for hosting in hosting_list:
-            if hosting in self.name:
-                self.hosting = hosting
-                return
 
     @api.multi
     def get_pull_request(self, pull_number):

@@ -22,7 +22,7 @@
 ##############################################################################
 import re
 
-from openerp import models, api, fields
+from odoo import models, api, fields
 
 from .github import GithubHosting
 

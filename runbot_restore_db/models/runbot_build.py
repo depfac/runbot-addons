@@ -21,8 +21,8 @@
 ##############################################################################
 import traceback
 import logging
-import openerp
-from openerp import models, api
+import odoo
+from odoo import models, api
 
 _logger = logging.getLogger(__name__)
 

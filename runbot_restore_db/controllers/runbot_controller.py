@@ -20,10 +20,10 @@
 #
 ##############################################################################
 
-from openerp.addons.runbot import runbot
+from odoo.addons.runbot.controllers.frontend import Runbot
 
 
-class RunbotControllerPS(runbot.RunbotController):
+class RunbotControllerPS(Runbot):
     def build_info(self, build):
         res = super(RunbotControllerPS, self).build_info(build)
         res['parse_job_ids'] = [elmt.name for elmt in
