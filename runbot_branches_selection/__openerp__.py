@@ -31,7 +31,7 @@ Runbot Branches Selection
 Add option in repo form view for selecting which branches should be built.
 """,
     'author': "dFakto",
-    'depends': ['runbot', 'runbot_multiple_hosting'],
+    'depends': ['runbot'],
     'data': [
         "views/runbot.xml",
     ],

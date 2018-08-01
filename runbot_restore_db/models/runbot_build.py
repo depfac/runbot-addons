@@ -21,7 +21,7 @@
 ##############################################################################
 import traceback
 import logging
-import odoo
+from odoo.sql_db import db_connect
 from odoo import models, api
 
 _logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ class RunbotBuild(models.Model):
 
     @api.model
     def _set_admin_password(self, password='admin'):
-        db = openerp.sql_db.db_connect('%s-all' % self.dest)
+        db = db_connect('%s-all' % self.dest)
         # threading.current_thread().dbname = '%s-all' % build.dest
         build_cr = db.cursor()
         old_password = False
@@ -102,7 +102,7 @@ WHERE id = 1" % password)
         query = "UPDATE ir_module_module SET demo = True"
         if build.repo_id.modules_auto in ('none', 'repo'):
             query += " WHERE name IN ('%s');" % "','".join(modules_to_test.split(','))
-        db = openerp.sql_db.db_connect('%s-all' % build.dest)
+        db = db_connect('%s-all' % build.dest)
         build_cr = db.cursor()
 
         try:
@@ -123,7 +123,7 @@ WHERE id = 1" % password)
         build_url = ('https://%s.%s') % (build.dest, self.env['ir.config_parameter'].get_param('runbot.domain'))
         query = ("UPDATE ir_config_parameter SET value = '%s' WHERE key LIKE 'web.base.url' OR key LIKE 'report.url'") % build_url
 
-        db = openerp.sql_db.db_connect('%s-all' % build.dest)
+        db = db_connect('%s-all' % build.dest)
         build_cr = db.cursor()
         try:
             build_cr.execute(query)

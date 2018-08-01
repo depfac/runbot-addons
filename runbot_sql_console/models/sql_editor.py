@@ -21,7 +21,6 @@
 ##############################################################################
 from odoo import models, api, fields, _
 from odoo.exceptions import Warning
-import odoo
 
 from psycopg2 import ProgrammingError
 from ..tabulate import tabulate

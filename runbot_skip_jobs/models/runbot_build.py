@@ -22,58 +22,61 @@
 import os
 import time
 from odoo import models, api, fields
-from odoo.addons.runbot.common import locked
+from odoo.addons.runbot.common import dt2time, fqdn, now, locked, grep, time2str, rfind, uniq_list, local_pgadmin_cursor, lock, get_py_version
+import logging
+import re
 
+_re_error = r'^(?:\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (?:ERROR|CRITICAL) )|(?:Traceback \(most recent call last\):)$'
+_re_warning = r'^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ WARNING '
+re_job = re.compile('_job_\d')
+
+_logger = logging.getLogger(__name__)
 
 class RunbotBuild(models.Model):
     _inherit = "runbot.build"
 
-    @api.model
+    def _get_closest_branch_name(self, target_repo_id):
+        """Return (repo, branch name) of the closest common branch between build's branch and
+           any branch of target_repo or its duplicated repos.
+
+        Rules priority for choosing the branch from the other repo is:
+        1. Same branch name
+        2. A PR whose head name match
+        3. Match a branch which is the dashed-prefix of current branch name
+        4. Common ancestors (git merge-base)
+        Note that PR numbers are replaced by the branch name of the PR target
+        to prevent the above rules to mistakenly link PR of different repos together.
+        """
+        self.ensure_one()
+        return target_repo_id, '10.0', 'default'
+
     def _job_30_run(self, build, lock_path, log_path):
-        """
-        Redefine this job to avoid ERROR on empty logs like db restore
-        :param build:
-        :param lock_path:
-        :param log_path:
-        :return:
-        """
-        # if build.repo_id.db_name and build.state == 'running' \
-        #         and build.result == "ko":
-        #     return 0
-
-        # parse logs (only ones that have been chosen)
-        runbot._re_error = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (ERROR)'
-        runbot._re_warning = r'\d{4}-\d\d-\d\d \d\d:\d\d:\d\d,\d{3} \d+ (WARNING)'
-
-        v = {}
+        v = {
+        }
         result = "ok"
+        build._log('run', 'Start running build %s' % build.dest)
         log_names = [elmt.name for elmt in build.repo_id.parse_job_ids]
         for log_name in log_names:
             log_all = build._path('logs', log_name + '.txt')
-            if runbot.grep(log_all, ".modules.loading: Modules loaded."):
-                if runbot.rfind(log_all, runbot._re_error):
+            log_time = time.localtime(os.path.getmtime(log_all))
+            v['job_end'] = time2str(log_time)
+
+            if grep(log_all, ".modules.loading: Modules loaded."):
+                if rfind(log_all, _re_error):
                     result = "ko"
-                    break;
-                elif runbot.rfind(log_all, runbot._re_warning):
+                elif rfind(log_all, _re_warning):
                     result = "warn"
-                elif not runbot.grep(build._server("test/common.py"),
-                              "post_install") or runbot.grep(log_all,
-                                                      "Initiating shutdown."):
-                    if result != "warn":
-                        result = "ok"
+                elif not grep(build._server("test/common.py"), "post_install") or grep(log_all, "Initiating shutdown."):
+                    result = "ok"
             else:
                 result = "ko"
-                break;
-            log_time = time.localtime(os.path.getmtime(log_all))
-            v['job_end'] = time.strftime(
-                openerp.tools.DEFAULT_SERVER_DATETIME_FORMAT, log_time)
 
         v['result'] = result
         build.write(v)
-        build.github_status()
-
+        # post statuses on duplicate too
+        for b in self.search([('name', '=', build.name)]):
+            b._github_status()
         # run server
-        build._log('run', 'Start running build %s' % build.dest)
         cmd, mods = build._cmd()
         if os.path.exists(build._server('addons/im_livechat')):
             cmd += ["--workers", "2"]
@@ -85,12 +88,11 @@ class RunbotBuild(models.Model):
 
         cmd += ['-d', "%s-all" % build.dest]
 
-        if runbot.grep(build._server("tools/config.py"), "db-filter"):
+        if grep(build._server("tools/config.py"), "db-filter"):
             if build.repo_id.nginx:
-                cmd += ['--db-filter', '%d.*$']
+                cmd += ['--db-filter', '%d.*$' % build.dest]
             else:
                 cmd += ['--db-filter', '%s.*$' % build.dest]
-
         return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
 
     def _schedule(self):

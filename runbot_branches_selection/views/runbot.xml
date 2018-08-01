@@ -7,10 +7,7 @@
         <field name="inherit_id" ref="runbot.repo_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="before">
-                <label for="label"/>
-                <h1>
-                    <field name="label" class="oe_inline" required="1"/>
-                </h1>
+                <field name="label" class="oe_inline" required="1"/>
             </xpath>
             <xpath expr="//sheet" position="inside">
                 <group string="Branches filters">
