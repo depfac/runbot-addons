@@ -29,6 +29,7 @@
     'depends': ['runbot'],
     'data': [
         'views/runbot.xml',
+        'views/nginx.xml',
     ],
     'installable': True,
 }
