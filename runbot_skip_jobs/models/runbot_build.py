@@ -90,7 +90,7 @@ class RunbotBuild(models.Model):
 
         if grep(build._server("tools/config.py"), "db-filter"):
             if build.repo_id.nginx:
-                cmd += ['--db-filter', '%d.*$' % build.dest]
+                cmd += ['--db-filter', '%s.*$' % build.dest]
             else:
                 cmd += ['--db-filter', '%s.*$' % build.dest]
         return self._spawn(cmd, lock_path, log_path, cpu_limit=None)
