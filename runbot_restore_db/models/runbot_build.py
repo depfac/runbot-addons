@@ -120,7 +120,7 @@ WHERE id = 1" % password)
         if not build.repo_id.db_name:
             return 0
 
-        build_url = ('https://%s.%s') % (build.dest, self.env['ir.config_parameter'].get_param('runbot.domain'))
+        build_url = ('https://%s.%s') % (build.dest, self.env['ir.config_parameter'].get_param('runbot.runbot_domain'))
         query = ("UPDATE ir_config_parameter SET value = '%s' WHERE key LIKE 'web.base.url' OR key LIKE 'report.url'") % build_url
 
         db = db_connect('%s-all' % build.dest)
